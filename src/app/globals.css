@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --foreground: #18181b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --brand: #1d4ed8;
+  --brand-fg: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --font-sans: var(--font-sans-kr), system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans-kr), "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 작은 유틸: 상태 배지 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  white-space: nowrap;
+}
