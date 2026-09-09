@@ -1,0 +1,32 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { Program } from "@/lib/types";
+import { RequestForm } from "./request-form";
+
+export default async function NewRequestPage() {
+  const supabase = await createClient();
+  const { data: programs } = await supabase
+    .from("programs")
+    .select("id,name,category")
+    .order("name")
+    .returns<Program[]>();
+
+  return (
+    <div className="mx-auto flex max-w-xl flex-col gap-5">
+      <div>
+        <Link href="/school" className="text-sm text-muted hover:underline">
+          ← 신청 목록
+        </Link>
+        <h1 className="mt-1 text-xl font-bold">신규 교육 프로그램 신청</h1>
+      </div>
+
+      {!programs || programs.length === 0 ? (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          등록된 프로그램이 없습니다. 담당자에게 문의하세요.
+        </p>
+      ) : (
+        <RequestForm programs={programs} />
+      )}
+    </div>
+  );
+}
