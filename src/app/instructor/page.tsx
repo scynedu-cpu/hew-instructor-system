@@ -1,14 +1,63 @@
 import { requireRole } from "@/lib/auth";
-import { AppShell } from "@/components/app-shell";
+import { createClient } from "@/lib/supabase/server";
+import type {
+  CareerRow,
+  CertRow,
+  Instructor,
+  SpecialtyRow,
+} from "@/lib/types";
+import { ProfileSection } from "./profile-section";
+import { CareerSection } from "./career-section";
+import { CertSection } from "./cert-section";
+import { SpecialtySection } from "./specialty-section";
 
-export default async function InstructorHome() {
+export default async function InstructorProfilePage() {
   const { account } = await requireRole("instructor");
+  const supabase = await createClient();
+
+  const { data: instructor } = await supabase
+    .from("instructors")
+    .select("*")
+    .eq("id", account.instructor_id!)
+    .maybeSingle<Instructor>();
+
+  if (!instructor) {
+    return (
+      <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        강사 정보를 불러오지 못했습니다. 담당자에게 문의하세요.
+      </p>
+    );
+  }
+
+  const [{ data: career }, { data: certs }, { data: specialties }] =
+    await Promise.all([
+      supabase
+        .from("instructor_career_history")
+        .select("*")
+        .eq("instructor_id", instructor.id)
+        .order("year_month", { ascending: false })
+        .returns<CareerRow[]>(),
+      supabase
+        .from("instructor_certifications")
+        .select("*")
+        .eq("instructor_id", instructor.id)
+        .order("issued_date", { ascending: false })
+        .returns<CertRow[]>(),
+      supabase
+        .from("instructor_specialties")
+        .select("*")
+        .eq("instructor_id", instructor.id)
+        .order("specialty")
+        .returns<SpecialtyRow[]>(),
+    ]);
 
   return (
-    <AppShell roleLabel="강사" userName={account.display_name ?? "강사"}>
-      <div className="rounded-lg border border-dashed border-border bg-surface px-4 py-12 text-center text-sm text-muted">
-        강사 정보 입력 화면은 준비 중입니다. (다음 작업지시서)
-      </div>
-    </AppShell>
+    <div className="flex flex-col gap-5">
+      <h1 className="text-xl font-bold">강사 기본 정보</h1>
+      <ProfileSection instructor={instructor} />
+      <CareerSection items={career ?? []} />
+      <CertSection items={certs ?? []} />
+      <SpecialtySection items={specialties ?? []} />
+    </div>
   );
 }

@@ -81,6 +81,56 @@ export interface ClassSession {
   created_at: string;
 }
 
+export interface Instructor {
+  id: string;
+  photo_url: string | null;
+  name: string;
+  birth_date: string | null;
+  address: string | null;
+  home_phone: string | null;
+  mobile_phone: string | null;
+  email: string | null;
+  bank_account: string | null;
+  status: "active" | "inactive";
+  rating_avg: number;
+  form_submitted_at: string | null;
+  created_at: string;
+}
+
+export interface CareerRow {
+  id: string;
+  instructor_id: string;
+  year_month: string | null;
+  description: string | null;
+  issuing_org: string | null;
+}
+
+export interface CertRow {
+  id: string;
+  instructor_id: string;
+  cert_name: string;
+  issued_date: string | null;
+  issuing_org: string | null;
+}
+
+export interface SpecialtyRow {
+  id: string;
+  instructor_id: string;
+  specialty: string;
+}
+
+export interface DocumentRow {
+  id: string;
+  instructor_id: string;
+  doc_type: string;
+  file_url: string | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  status: "valid" | "expiring_soon" | "expired";
+  expiry_notified_at: string | null;
+  created_at: string;
+}
+
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   submitted: "제출됨",
   reviewing: "검토중",
