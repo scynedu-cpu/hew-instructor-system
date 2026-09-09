@@ -59,21 +59,27 @@ FROM schools s, programs p WHERE s.name = '매헌중학교' AND p.name = '직업
 
 -- ---------- 로그인 계정 3종 ----------
 WITH new_users AS (
+  -- ⚠ 토큰 컬럼(confirmation_token 등)은 nullable 인데 GoTrue 는 NULL 을 못 읽어
+  --   500 "Database error querying schema" 를 낸다. 반드시 '' 로 채운다.
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token, email_change,
+    email_change_token_new, email_change_token_current,
+    phone_change, phone_change_token, reauthentication_token
   )
-  VALUES
-    ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
-     'staff@hew.test', extensions.crypt('hew-test-1234!', extensions.gen_salt('bf')),
-     now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"name":"담당자"}'),
-    ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
-     'school-a@hew.test', extensions.crypt('hew-test-1234!', extensions.gen_salt('bf')),
-     now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"name":"양재초 최담임"}'),
-    ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
-     'instructor-a@hew.test', extensions.crypt('hew-test-1234!', extensions.gen_salt('bf')),
-     now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"name":"김민수"}')
+  SELECT
+    '00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
+    email, extensions.crypt('hew-test-1234!', extensions.gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb, meta::jsonb,
+    '', '', '', '', '', '', '', ''
+  FROM (VALUES
+    ('staff@hew.test',      '{"name":"담당자"}'),
+    ('school-a@hew.test',   '{"name":"양재초 최담임"}'),
+    ('instructor-a@hew.test','{"name":"김민수"}')
+  ) AS v(email, meta)
   RETURNING id, email
 )
 INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
