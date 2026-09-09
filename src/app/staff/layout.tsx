@@ -8,7 +8,10 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
     <AppShell
       roleLabel="담당자"
       userName={account.display_name ?? "담당자"}
-      nav={[{ href: "/staff/requests", label: "교육 신청 관리" }]}
+      nav={[
+        { href: "/staff/requests", label: "교육 신청 관리" },
+        { href: "/staff/instructors", label: "강사 계정" },
+      ]}
     >
       {children}
     </AppShell>
