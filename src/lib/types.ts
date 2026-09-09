@@ -131,6 +131,77 @@ export interface DocumentRow {
   created_at: string;
 }
 
+// ---- 작업지시서 #004: 강사 매칭 / 배정 ----
+
+export type AssignmentType = "provisional" | "confirmed";
+
+export type ChangeContext = "final_confirm" | "calendar_edit";
+
+export interface AssignmentCandidate {
+  id: string;
+  session_id: string;
+  instructor_id: string;
+  rank: number;
+  match_score: number | null;
+  generated_at: string;
+}
+
+/** 후보 목록 화면용: 후보 + 강사(전문분야 포함) 조인 */
+export interface AssignmentCandidateWithInstructor extends AssignmentCandidate {
+  instructor:
+    | (Pick<Instructor, "id" | "name" | "rating_avg" | "status"> & {
+        instructor_specialties: { specialty: string }[];
+      })
+    | null;
+}
+
+export interface Assignment {
+  id: string;
+  session_id: string;
+  instructor_id: string;
+  assignment_type: AssignmentType;
+  selected_from_candidate_id: string | null;
+  assigned_by: string;
+  provisional_at: string | null;
+  confirm_due_date: string | null;
+  confirmed_at: string | null;
+  is_changed_at_final: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentHistoryRow {
+  id: string;
+  assignment_id: string;
+  from_status: string | null;
+  to_status: string;
+  from_instructor_id: string | null;
+  to_instructor_id: string | null;
+  change_context: ChangeContext;
+  changed_by: string | null;
+  changed_at: string;
+  reason: string | null;
+}
+
+/** 예정일/시간대 확정을 위한 class_sessions + 학교/프로그램/신청서 조인 */
+export interface ClassSessionWithRefs extends ClassSession {
+  school: Pick<School, "id" | "name" | "level"> | null;
+  program: Pick<Program, "id" | "name" | "category"> | null;
+  request: Pick<
+    SessionRequest,
+    "requested_dates" | "preferred_time_slot"
+  > | null;
+}
+
+export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
+  unassigned: "미배정",
+  provisional: "임시배정",
+  confirmed: "최종확정",
+  completed: "강의완료",
+  cancelled: "취소",
+};
+
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   submitted: "제출됨",
   reviewing: "검토중",
