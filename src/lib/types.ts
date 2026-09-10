@@ -194,6 +194,50 @@ export interface ClassSessionWithRefs extends ClassSession {
   > | null;
 }
 
+export interface ScheduleHistoryRow {
+  id: string;
+  session_id: string;
+  previous_date: string | null;
+  previous_time_slot: string | null;
+  new_date: string;
+  new_time_slot: string | null;
+  changed_by: string | null;
+  changed_at: string;
+  reason: string | null;
+}
+
+// ---- 작업지시서 #005: 자체 캘린더 ----
+
+export interface InstructorWithSpecialties {
+  id: string;
+  name: string;
+  status: "active" | "inactive";
+  rating_avg: number;
+  specialties: string[];
+}
+
+/** 캘린더 카드용: scheduled_date 가 있는 세션 + 학교/프로그램/배정강사 */
+export interface CalendarSession {
+  id: string;
+  scheduled_date: string;
+  time_slot: string | null;
+  session_status: SessionStatus;
+  school_name: string;
+  program_name: string;
+  instructor_id: string | null;
+  instructor_name: string | null;
+  assignment_type: AssignmentType | null;
+}
+
+export interface TimeConflict {
+  session_id: string;
+  school_name: string;
+  program_name: string;
+  scheduled_date: string;
+  time_slot: string | null;
+  session_status: string;
+}
+
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   unassigned: "미배정",
   provisional: "임시배정",
