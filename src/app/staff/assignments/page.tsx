@@ -14,7 +14,7 @@ export default async function StaffAssignmentsPage({
   const { data, error } = await supabase
     .from("class_sessions")
     .select(
-      "*, school:schools(id,name,level), program:programs(id,name,category), request:session_requests(requested_dates,preferred_time_slot)",
+      "*, school:schools(id,name,level), program:programs(id,name,category), request_item:session_request_items(requested_dates,preferred_time_slot,dates_tbd)",
     )
     .eq("session_status", "unassigned")
     .order("created_at", { ascending: true })
@@ -78,7 +78,7 @@ export default async function StaffAssignmentsPage({
                       )}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted">
-                      {(s.request?.requested_dates ?? []).join(", ") || "-"}
+                      {(s.request_item?.requested_dates ?? []).join(", ") || "-"}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Link

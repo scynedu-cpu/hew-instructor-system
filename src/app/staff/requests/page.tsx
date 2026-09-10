@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { RequestStatus, SessionRequestWithRefs } from "@/lib/types";
-import { REQUEST_STATUS_LABEL } from "@/lib/types";
+import { REQUEST_STATUS_LABEL, programLabel } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 
 const FILTERS: { key: RequestStatus | "all"; label: string }[] = [
@@ -24,7 +24,7 @@ export default async function StaffRequestsPage({
   let query = supabase
     .from("session_requests")
     .select(
-      "*, school:schools(id,name,level), program:programs(id,name,category), class_sessions(id,session_status)",
+      "*, school:schools(id,name,level), session_request_items(*, program:programs(id,name,category,sub_program,matching_keyword)), class_sessions(id,session_status)",
     )
     .order("submitted_at", { ascending: false });
 
@@ -92,8 +92,7 @@ export default async function StaffRequestsPage({
                 <th className="px-3 py-2 font-medium">상태</th>
                 <th className="px-3 py-2 font-medium">학교</th>
                 <th className="px-3 py-2 font-medium">프로그램</th>
-                <th className="px-3 py-2 font-medium">희망일자</th>
-                <th className="px-3 py-2 font-medium">전문분야</th>
+                <th className="px-3 py-2 font-medium">매칭 키워드</th>
                 <th className="px-3 py-2 font-medium">제출</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
@@ -110,11 +109,22 @@ export default async function StaffRequestsPage({
                       {r.school?.level}
                     </span>
                   </td>
-                  <td className="px-3 py-2">{r.program?.name ?? "-"}</td>
                   <td className="px-3 py-2 text-xs">
-                    {(r.requested_dates ?? []).join(", ") || "-"}
+                    {(r.session_request_items ?? [])
+                      .map((it) =>
+                        it.program ? programLabel(it.program) : "프로그램",
+                      )
+                      .join(", ") || "-"}
                   </td>
-                  <td className="px-3 py-2">{r.required_specialty || "-"}</td>
+                  <td className="px-3 py-2 text-xs">
+                    {[
+                      ...new Set(
+                        (r.session_request_items ?? [])
+                          .map((it) => it.program?.matching_keyword)
+                          .filter(Boolean),
+                      ),
+                    ].join(", ") || "-"}
+                  </td>
                   <td className="px-3 py-2 text-xs text-muted">
                     {new Date(r.submitted_at).toLocaleDateString("ko-KR")}
                     {r.submitted_by ? ` · ${r.submitted_by}` : ""}

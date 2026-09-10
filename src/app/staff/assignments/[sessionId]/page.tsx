@@ -22,7 +22,7 @@ export default async function AssignmentDetailPage({
   const { data: session } = await supabase
     .from("class_sessions")
     .select(
-      "*, school:schools(id,name,level), program:programs(id,name,category), request:session_requests(requested_dates,preferred_time_slot)",
+      "*, school:schools(id,name,level), program:programs(id,name,category), request_item:session_request_items(requested_dates,preferred_time_slot,dates_tbd)",
     )
     .eq("id", sessionId)
     .maybeSingle<ClassSessionWithRefs>();
@@ -95,10 +95,10 @@ export default async function AssignmentDetailPage({
         <>
           <ScheduleForm
             sessionId={session.id}
-            requestedDates={session.request?.requested_dates ?? []}
+            requestedDates={session.request_item?.requested_dates ?? []}
             currentDate={session.scheduled_date}
             currentTimeSlot={
-              session.time_slot ?? session.request?.preferred_time_slot ?? ""
+              session.time_slot ?? session.request_item?.preferred_time_slot ?? ""
             }
             hasCandidates={(candidates ?? []).length > 0}
           />

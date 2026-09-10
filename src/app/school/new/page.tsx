@@ -9,8 +9,10 @@ export default async function NewRequestPage() {
   const supabase = await createClient();
   const { data: programs } = await supabase
     .from("programs")
-    .select("id,name,category")
-    .order("name")
+    .select("*")
+    .eq("is_active", true)
+    .order("category")
+    .order("sub_program", { nullsFirst: true })
     .returns<Program[]>();
 
   return (

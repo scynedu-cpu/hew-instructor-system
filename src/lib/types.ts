@@ -37,13 +37,26 @@ export interface School {
 export interface Program {
   id: string;
   name: string;
+  category: string | null; // 대분류
+  sub_program: string | null; // 세부항목
+  matching_keyword: string | null; // 강사 매칭 키워드 (자동계산)
+  is_active: boolean;
+}
+
+/** 프로그램 표시명 (대분류 - 세부) */
+export function programLabel(p: {
   category: string | null;
+  sub_program: string | null;
+  name: string;
+}): string {
+  const cat = p.category ?? p.name;
+  return p.sub_program ? `${cat} · ${p.sub_program}` : cat;
 }
 
 export interface SessionRequest {
   id: string;
   school_id: string;
-  program_id: string;
+  program_id: string | null;
   academic_year: number;
   requested_dates: string[] | null;
   preferred_time_slot: string | null;
@@ -52,6 +65,7 @@ export interface SessionRequest {
   required_instructor_count: number;
   request_status: RequestStatus;
   submitted_by: string | null;
+  teacher_name: string | null;
   submitted_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -60,10 +74,29 @@ export interface SessionRequest {
   created_at: string;
 }
 
-/** 목록 화면용: 신청서 + 학교/프로그램 조인 */
+export interface SessionRequestItem {
+  id: string;
+  request_id: string;
+  program_id: string;
+  requested_dates: string[] | null;
+  dates_tbd: boolean;
+  preferred_time_slot: string | null;
+  expected_student_count: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface SessionRequestItemWithProgram extends SessionRequestItem {
+  program: Pick<
+    Program,
+    "id" | "name" | "category" | "sub_program" | "matching_keyword"
+  > | null;
+}
+
+/** 목록 화면용: 신청서 + 학교/명세 조인 */
 export interface SessionRequestWithRefs extends SessionRequest {
   school: Pick<School, "id" | "name" | "level"> | null;
-  program: Pick<Program, "id" | "name" | "category"> | null;
+  session_request_items: SessionRequestItemWithProgram[];
   class_sessions: { id: string; session_status: SessionStatus }[];
 }
 
@@ -186,13 +219,14 @@ export interface AssignmentHistoryRow {
   reason: string | null;
 }
 
-/** 예정일/시간대 확정을 위한 class_sessions + 학교/프로그램/신청서 조인 */
+/** 예정일/시간대 확정을 위한 class_sessions + 학교/프로그램/신청명세 조인 */
 export interface ClassSessionWithRefs extends ClassSession {
+  request_item_id: string | null;
   school: Pick<School, "id" | "name" | "level"> | null;
-  program: Pick<Program, "id" | "name" | "category"> | null;
-  request: Pick<
-    SessionRequest,
-    "requested_dates" | "preferred_time_slot"
+  program: Pick<Program, "id" | "name" | "category" | "sub_program"> | null;
+  request_item: Pick<
+    SessionRequestItem,
+    "requested_dates" | "preferred_time_slot" | "dates_tbd"
   > | null;
 }
 

@@ -6,18 +6,32 @@ export interface AutofillMeta {
   source: "hwp" | "image";
   simulated: boolean;
   textPreview: string | null;
+  /** 이미지 원본 미리보기용 data URL (source==='image' 일 때) */
+  imageDataUrl: string | null;
+  fileName: string;
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(file);
+  });
 }
 
 /**
- * 파일(hwp/hwpx/이미지) 업로드 → /api/ai/autofill → 추출된 필드를 onFilled 로 전달.
+ * 파일(hwp/hwpx/이미지) 업로드 → /api/ai/autofill → 추출 필드를 onFilled 로 전달.
  * 채워진 값은 폼(state)에만 반영되고 DB 저장은 관리자가 별도 버튼으로.
  */
 export function AutofillPanel({
   kind,
   onFilled,
+  compact = false,
 }: {
   kind: "school-request" | "instructor";
   onFilled: (fields: Record<string, unknown>, meta: AutofillMeta) => void;
+  compact?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -31,6 +45,10 @@ export function AutofillPanel({
     setFileName(file.name);
     setBusy(true);
     try {
+      const isImage =
+        file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+      const imageDataUrl = isImage ? await readAsDataUrl(file) : null;
+
       const fd = new FormData();
       fd.set("kind", kind);
       fd.set("file", file);
@@ -44,12 +62,14 @@ export function AutofillPanel({
         source: data.source,
         simulated: !!data.simulated,
         textPreview: data.textPreview ?? null,
+        imageDataUrl,
+        fileName: file.name,
       });
       const src = data.source === "hwp" ? "한글 문서" : "이미지";
       setMsg(
-        `${src}에서 값을 읽어 아래 폼에 채웠습니다${
+        `${src}에서 값을 읽어 왼쪽 폼에 채웠습니다${
           data.simulated ? " (모의 모드 — 키 미설정)" : ""
-        }. 내용을 확인·수정한 뒤 저장하세요. 비어 있는 항목은 직접 입력하면 됩니다.`,
+        }. 오른쪽 원본과 대조해 확인·수정한 뒤 저장하세요.`,
       );
     } catch {
       setErr("업로드 중 오류가 발생했습니다.");
@@ -59,17 +79,23 @@ export function AutofillPanel({
   }
 
   return (
-    <section className="rounded-lg border border-dashed border-brand/40 bg-blue-50/40 p-4">
+    <section
+      className={`rounded-lg border border-dashed border-brand/40 bg-blue-50/40 ${
+        compact ? "p-3" : "p-4"
+      }`}
+    >
       <h2 className="text-sm font-semibold">
         AI 자동채움 <span className="font-normal text-muted">(선택)</span>
       </h2>
-      <p className="mt-1 text-xs text-muted">
-        학교/강사에게 받은 <b>한글 문서(.hwp·.hwpx)</b> 또는{" "}
-        <b>사진·스캔 이미지</b>를 올리면 아래 항목을 자동으로 채웁니다. 저장 전까지
-        자유롭게 수정할 수 있고, 못 읽은 항목은 비워둡니다.
-      </p>
+      {!compact && (
+        <p className="mt-1 text-xs text-muted">
+          학교/강사에게 받은 <b>한글 문서(.hwp·.hwpx)</b> 또는{" "}
+          <b>사진·스캔 이미지</b>를 올리면 항목을 자동으로 채웁니다. 저장 전까지
+          자유롭게 수정할 수 있고, 못 읽은 항목은 비워둡니다.
+        </p>
+      )}
 
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
           disabled={busy}

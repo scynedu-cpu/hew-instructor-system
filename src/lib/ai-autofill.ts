@@ -37,14 +37,18 @@ function guessImageMedia(filename: string, mimeType: string): string | null {
 
 const SCHEMA: Record<AutofillKind, string> = {
   "school-request": `{
-  "school_name": string|null,           // 신청 학교명 (있으면 그대로)
-  "program_name": string|null,          // 신청 프로그램/교육명
-  "requested_dates": string[]|null,     // 희망일자, "YYYY-MM-DD" 배열
-  "preferred_time_slot": string|null,   // 희망 시간대 (예: "10:00~12:00", "3,4교시")
-  "expected_student_count": string|null,// 예상 인원 (예: "120명", "8학급")
-  "required_specialty": string|null,    // 필요 전문분야 (예: "AI교육", "드론전문가")
-  "required_instructor_count": number|null, // 필요 강사 수
-  "original_submitter": string|null     // 원 신청 담당교사 이름
+  "school_name": string|null,   // 신청 학교명
+  "teacher_name": string|null,  // 신청 담당교사 이름
+  "items": [                     // 신청서에 ○/체크된 프로그램마다 1개. 여러 개면 여러 항목.
+    {
+      "program_name": string|null,          // 프로그램명 (대분류 또는 세부항목, 예: "현장직업체험 로봇공학자", "직업인특강")
+      "requested_dates": string[]|null,     // 희망일자 "YYYY-MM-DD" 배열
+      "dates_tbd": boolean,                 // 일자 미정이면 true
+      "preferred_time_slot": string|null,   // 시간대 (예: "3,4교시", "10:00~12:00")
+      "expected_student_count": string|null,// 인원 (예: "90명", "4학급")
+      "note": string|null                   // 비고
+    }
+  ]|null
 }`,
   instructor: `{
   "name": string|null,
@@ -99,13 +103,25 @@ function mockFields(
     return kind === "school-request"
       ? {
           school_name: "매헌중학교",
-          program_name: "직업인특강",
-          requested_dates: null,
-          preferred_time_slot: "3,4교시",
-          expected_student_count: "5학급",
-          required_specialty: "드론전문가",
-          required_instructor_count: 1,
-          original_submitter: "정담임",
+          teacher_name: "정담임",
+          items: [
+            {
+              program_name: "직업인특강",
+              requested_dates: null,
+              dates_tbd: true,
+              preferred_time_slot: "3,4교시",
+              expected_student_count: "5학급",
+              note: null,
+            },
+            {
+              program_name: "현장직업체험 드론전문가",
+              requested_dates: ["2026-11-20"],
+              dates_tbd: false,
+              preferred_time_slot: "5,6교시",
+              expected_student_count: "2학급",
+              note: "체육관 사용",
+            },
+          ],
         }
       : {
           name: "이수민",
@@ -122,15 +138,31 @@ function mockFields(
         };
   }
   if (kind === "school-request") {
+    const dates = [
+      ...(text?.matchAll(/(\d{4}-\d{2}-\d{2})/g) ?? []),
+    ].map((m) => m[1]);
+    const progNames = [
+      ...(text?.matchAll(
+        /(센터체험|직업인특강|현장직업체험[^\n]*|진로[^\n]*|전환기교육)/g,
+      ) ?? []),
+    ].map((m) => m[1].trim());
+    const uniqProg = [...new Set(progNames)];
     return {
-      school_name: text?.match(/([가-힣]+(?:초등학교|중학교|고등학교))/)?.[1] ?? null,
-      program_name: text?.match(/(센터체험|직업인특강|진로|전환기교육)/)?.[1] ?? null,
-      requested_dates: null,
-      preferred_time_slot: text?.match(/(\d{1,2}:\d{2}\s*[~∼-]\s*\d{1,2}:\d{2}|\d[,·]\d교시)/)?.[1] ?? null,
-      expected_student_count: text?.match(/(\d+\s*명|\d+\s*학급)/)?.[1] ?? null,
-      required_specialty: text?.match(/(AI교육|드론전문가|로봇공학|코딩교육)/)?.[1] ?? null,
-      required_instructor_count: 1,
-      original_submitter: null,
+      school_name:
+        text?.match(/([가-힣]+(?:초등학교|중학교|고등학교))/)?.[1] ?? null,
+      teacher_name: text?.match(/담당\s*교사[:：]?\s*([가-힣]{2,4})/)?.[1] ?? null,
+      items: (uniqProg.length ? uniqProg : ["센터체험"]).map((name) => ({
+        program_name: name,
+        requested_dates: dates.length ? dates : null,
+        dates_tbd: dates.length === 0,
+        preferred_time_slot:
+          text?.match(
+            /(\d{1,2}:\d{2}\s*[~∼-]\s*\d{1,2}:\d{2}|\d[,·]\d교시)/,
+          )?.[1] ?? null,
+        expected_student_count:
+          text?.match(/(\d+\s*명|\d+\s*학급)/)?.[1] ?? null,
+        note: null,
+      })),
     };
   }
   const line = (label: RegExp) => text?.match(label)?.[1]?.trim() ?? null;
@@ -190,7 +222,7 @@ export async function autofillFromFile(
     if (!text.trim()) throw new Error("문서에서 텍스트를 추출하지 못했습니다.");
   }
   const source: AutofillSource = isHwp ? "hwp" : "image";
-  const textPreview = text ? text.slice(0, 800) : null;
+  const textPreview = text ? text.slice(0, 20_000) : null; // 오른쪽 원본 대조용
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

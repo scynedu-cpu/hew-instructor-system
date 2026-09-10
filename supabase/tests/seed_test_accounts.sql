@@ -18,16 +18,20 @@ DELETE FROM class_sessions   WHERE school_id IN (SELECT id FROM schools WHERE na
 DELETE FROM session_requests WHERE school_id IN (SELECT id FROM schools WHERE name IN ('양재초등학교', '매헌중학교'));
 DELETE FROM instructors WHERE name IN ('김민수', '박서연');
 DELETE FROM schools     WHERE name IN ('양재초등학교', '매헌중학교');
-DELETE FROM programs    WHERE name IN ('센터체험', '직업인특강');
+DELETE FROM programs    WHERE category IN ('센터체험', '직업인특강', '현장직업체험')
+                           OR name IN ('센터체험', '직업인특강');
 
 -- ---------- 최소 매핑 데이터 ----------
 INSERT INTO schools (name, level, district, teacher_name)
 VALUES ('양재초등학교', '초등학교', '서초구', '최담임'),
        ('매헌중학교',   '중학교',   '서초구', '정담임');
 
-INSERT INTO programs (name, category)
-VALUES ('센터체험', '현장체험형'),
-       ('직업인특강', '특강형');
+-- 프로그램: 2단계 분류 (대분류 category + 세부 sub_program). matching_keyword 는 자동계산.
+INSERT INTO programs (name, category, sub_program) VALUES
+  ('센터체험',                '센터체험',      NULL),
+  ('직업인특강',              '직업인특강',    NULL),
+  ('현장직업체험 · AI교육',   '현장직업체험',  'AI교육'),
+  ('현장직업체험 · 드론전문가','현장직업체험',  '드론전문가');
 
 INSERT INTO instructors (name, mobile_phone, email, status, rating_avg, form_submitted_at)
 VALUES ('김민수', '010-1111-2222', 'kim@example.com', 'active', 4.5, current_date),
@@ -49,13 +53,24 @@ SELECT id, '성범죄경력조회동의서', current_date - 300, current_date + 
 UNION ALL
 SELECT id, '이력서',              current_date - 400, current_date + 695, 'valid' FROM instructors WHERE name = '김민수';
 
-INSERT INTO session_requests (school_id, program_id, academic_year, preferred_time_slot,
-                              expected_student_count, required_specialty, submitted_by, request_status)
-SELECT s.id, p.id, 2026, '10:00~12:00', '120명', 'AI교육', '최담임', 'submitted'
-FROM schools s, programs p WHERE s.name = '양재초등학교' AND p.name = '센터체험'
-UNION ALL
-SELECT s.id, p.id, 2026, '3,4교시', '8학급', '드론전문가', '정담임', 'submitted'
-FROM schools s, programs p WHERE s.name = '매헌중학교' AND p.name = '직업인특강';
+-- 신청서(헤더) + 명세(session_request_items)
+WITH req_a AS (
+  INSERT INTO session_requests (school_id, academic_year, submitted_by, teacher_name, request_status)
+  SELECT s.id, 2026, '최담임', '최담임', 'submitted' FROM schools s WHERE s.name = '양재초등학교'
+  RETURNING id
+)
+INSERT INTO session_request_items (request_id, program_id, requested_dates, preferred_time_slot, expected_student_count)
+SELECT r.id, p.id, ARRAY[date '2026-10-15']::date[], '10:00~12:00', '120명'
+FROM req_a r, programs p WHERE p.category = '센터체험' AND p.sub_program IS NULL;
+
+WITH req_b AS (
+  INSERT INTO session_requests (school_id, academic_year, submitted_by, teacher_name, request_status)
+  SELECT s.id, 2026, '정담임', '정담임', 'submitted' FROM schools s WHERE s.name = '매헌중학교'
+  RETURNING id
+)
+INSERT INTO session_request_items (request_id, program_id, requested_dates, preferred_time_slot, expected_student_count)
+SELECT r.id, p.id, ARRAY[date '2026-10-22']::date[], '3,4교시', '8학급'
+FROM req_b r, programs p WHERE p.category = '현장직업체험' AND p.sub_program = '드론전문가';
 
 -- ---------- 로그인 계정 3종 ----------
 WITH new_users AS (

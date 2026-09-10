@@ -16,13 +16,15 @@ export default async function ProxyRequestPage() {
       .returns<School[]>(),
     supabase
       .from("programs")
-      .select("id,name,category")
-      .order("name")
+      .select("*")
+      .eq("is_active", true)
+      .order("category")
+      .order("sub_program", { nullsFirst: true })
       .returns<Program[]>(),
   ]);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div>
         <Link
           href="/staff/requests"
@@ -32,8 +34,8 @@ export default async function ProxyRequestPage() {
         </Link>
         <h1 className="mt-1 text-xl font-bold">학교 신청 대리입력</h1>
         <p className="mt-1 text-sm text-muted">
-          학교에서 받은 자료를 담당자가 대신 입력합니다. 저장하면 일반 신청과
-          동일하게 검토·승인 절차를 탑니다.
+          오른쪽 원본과 왼쪽 자동채움 폼을 나란히 대조하며 입력합니다. 저장하면
+          일반 신청과 동일하게 검토·승인 절차를 탑니다.
         </p>
       </div>
       <ProxyRequestForm schools={schools ?? []} programs={programs ?? []} />

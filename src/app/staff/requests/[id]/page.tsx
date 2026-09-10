@@ -2,8 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionRequestWithRefs } from "@/lib/types";
+import { programLabel, SESSION_STATUS_LABEL } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 import { ReviewPanel } from "./review-panel";
+
+type SessionRow = {
+  id: string;
+  session_status: keyof typeof SESSION_STATUS_LABEL;
+  scheduled_date: string | null;
+  time_slot: string | null;
+  student_count: string | null;
+  required_specialty: string | null;
+  program_id: string;
+};
 
 export default async function StaffRequestDetailPage({
   params,
@@ -14,26 +25,19 @@ export default async function StaffRequestDetailPage({
   const { data: r } = await supabase
     .from("session_requests")
     .select(
-      "*, school:schools(id,name,level), program:programs(id,name,category), class_sessions(id,session_status,scheduled_date,time_slot,student_count,required_specialty,required_instructor_count)",
+      "*, school:schools(id,name,level), session_request_items(*, program:programs(id,name,category,sub_program,matching_keyword)), class_sessions(id,session_status,scheduled_date,time_slot,student_count,required_specialty,program_id)",
     )
     .eq("id", id)
     .maybeSingle<
-      SessionRequestWithRefs & {
-        class_sessions: {
-          id: string;
-          session_status: string;
-          scheduled_date: string | null;
-          time_slot: string | null;
-          student_count: string | null;
-          required_specialty: string | null;
-          required_instructor_count: number;
-        }[];
+      Omit<SessionRequestWithRefs, "class_sessions"> & {
+        class_sessions: SessionRow[];
       }
     >();
 
   if (!r) notFound();
 
-  const session = r.class_sessions?.[0];
+  const items = r.session_request_items ?? [];
+  const sessions = r.class_sessions ?? [];
   const isPending =
     r.request_status === "submitted" || r.request_status === "reviewing";
 
@@ -48,7 +52,7 @@ export default async function StaffRequestDetailPage({
         </Link>
         <div className="mt-1 flex items-center gap-2">
           <h1 className="text-xl font-bold">
-            {r.school?.name} · {r.program?.name}
+            {r.school?.name} · 프로그램 {items.length}건
           </h1>
           <StatusBadge status={r.request_status} />
         </div>
@@ -58,18 +62,8 @@ export default async function StaffRequestDetailPage({
         <Field label="학교">
           {r.school?.name} <span className="text-muted">({r.school?.level})</span>
         </Field>
-        <Field label="프로그램">
-          {r.program?.name}
-          {r.program?.category ? ` · ${r.program.category}` : ""}
-        </Field>
         <Field label="학년도">{r.academic_year}</Field>
-        <Field label="희망일자">
-          {(r.requested_dates ?? []).join(", ") || "-"}
-        </Field>
-        <Field label="희망 시간대">{r.preferred_time_slot || "-"}</Field>
-        <Field label="예상 인원">{r.expected_student_count || "-"}</Field>
-        <Field label="필요 전문분야">{r.required_specialty || "-"}</Field>
-        <Field label="필요 강사 수">{r.required_instructor_count}명</Field>
+        <Field label="담당교사">{r.teacher_name || "-"}</Field>
         <Field label="제출">
           {new Date(r.submitted_at).toLocaleString("ko-KR")}
           {r.submitted_by ? ` · ${r.submitted_by}` : ""}
@@ -87,6 +81,43 @@ export default async function StaffRequestDetailPage({
         )}
       </dl>
 
+      {/* 신청 프로그램(명세) */}
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-muted">
+          신청 프로그램 ({items.length}건)
+        </h2>
+        <ul className="flex flex-col gap-2">
+          {items.map((it) => (
+            <li
+              key={it.id}
+              className="rounded-lg border border-border bg-surface p-3 text-sm"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">
+                  {it.program ? programLabel(it.program) : "프로그램"}
+                </span>
+                {it.program?.matching_keyword && (
+                  <span className="badge bg-blue-50 text-blue-700">
+                    매칭: {it.program.matching_keyword}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
+                <span>
+                  희망일자:{" "}
+                  {it.dates_tbd
+                    ? "미정"
+                    : (it.requested_dates ?? []).join(", ") || "-"}
+                </span>
+                <span>시간: {it.preferred_time_slot || "-"}</span>
+                <span>인원: {it.expected_student_count || "-"}</span>
+                {it.note && <span>비고: {it.note}</span>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {r.request_status === "rejected" && (
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
           <span className="font-semibold">반려 사유:</span>{" "}
@@ -94,19 +125,26 @@ export default async function StaffRequestDetailPage({
         </div>
       )}
 
-      {r.request_status === "approved" && session && (
+      {r.request_status === "approved" && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm">
           <p className="font-semibold text-green-800">
-            승인됨 — 수업 일정 생성 완료
+            승인됨 — 수업 일정 {sessions.length}건 생성 완료
           </p>
-          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-green-900">
-            <Field label="세션 상태">{session.session_status}</Field>
-            <Field label="예정일">{session.scheduled_date || "미정"}</Field>
-            <Field label="시간대">{session.time_slot || "-"}</Field>
-            <Field label="인원">{session.student_count || "-"}</Field>
-          </dl>
+          <ul className="mt-2 flex flex-col gap-1 text-green-900">
+            {sessions.map((s) => {
+              const it = items.find((i) => i.program_id === s.program_id);
+              return (
+                <li key={s.id}>
+                  · {it?.program ? programLabel(it.program) : "프로그램"} —{" "}
+                  {SESSION_STATUS_LABEL[s.session_status]} /{" "}
+                  {s.scheduled_date || "예정일 미정"}
+                  {s.time_slot ? ` / ${s.time_slot}` : ""}
+                </li>
+              );
+            })}
+          </ul>
           <p className="mt-2 text-xs text-green-700">
-            실제 날짜 확정과 강사 배정은 다음 단계(강사 매칭)에서 진행됩니다.
+            예정일 확정과 강사 배정은 다음 단계(강사 배정)에서 진행됩니다.
           </p>
         </div>
       )}

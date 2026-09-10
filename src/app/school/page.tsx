@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSchoolContext } from "@/lib/auth";
 import type { SessionRequestWithRefs } from "@/lib/types";
+import { programLabel } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 
 export default async function SchoolRequestsPage() {
@@ -9,7 +10,9 @@ export default async function SchoolRequestsPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("session_requests")
-    .select("*, program:programs(id,name,category)")
+    .select(
+      "*, session_request_items(*, program:programs(id,name,category,sub_program,matching_keyword))",
+    )
     .eq("school_id", ctx.schoolId)
     .order("submitted_at", { ascending: false })
     .returns<SessionRequestWithRefs[]>();
@@ -50,11 +53,11 @@ export default async function SchoolRequestsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={r.request_status} />
                 <span className="font-semibold">
-                  {r.program?.name ?? "프로그램 미상"}
+                  프로그램 {r.session_request_items?.length ?? 0}건
                 </span>
-                {r.program?.category && (
+                {r.teacher_name && (
                   <span className="text-xs text-muted">
-                    {r.program.category}
+                    담당교사 {r.teacher_name}
                   </span>
                 )}
                 <span className="ml-auto text-xs text-muted">
@@ -62,26 +65,29 @@ export default async function SchoolRequestsPage() {
                 </span>
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-                <div>
-                  <dt className="text-xs text-muted">희망일자</dt>
-                  <dd>{(r.requested_dates ?? []).join(", ") || "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">희망 시간대</dt>
-                  <dd>{r.preferred_time_slot || "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">예상 인원</dt>
-                  <dd>{r.expected_student_count || "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">필요 전문분야 / 강사수</dt>
-                  <dd>
-                    {r.required_specialty || "-"} / {r.required_instructor_count}명
-                  </dd>
-                </div>
-              </dl>
+              <ul className="mt-3 flex flex-col gap-2">
+                {(r.session_request_items ?? []).map((it) => (
+                  <li
+                    key={it.id}
+                    className="rounded-md border border-border bg-zinc-50/50 p-2 text-sm"
+                  >
+                    <span className="font-medium">
+                      {it.program ? programLabel(it.program) : "프로그램"}
+                    </span>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted">
+                      <span>
+                        희망일자:{" "}
+                        {it.dates_tbd
+                          ? "미정"
+                          : (it.requested_dates ?? []).join(", ") || "-"}
+                      </span>
+                      <span>시간: {it.preferred_time_slot || "-"}</span>
+                      <span>인원: {it.expected_student_count || "-"}</span>
+                      {it.note && <span>비고: {it.note}</span>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
               {r.request_status === "rejected" && (
                 <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -89,10 +95,10 @@ export default async function SchoolRequestsPage() {
                   {r.rejection_reason || "(사유 미기재)"}
                 </p>
               )}
-
               {r.request_status === "approved" && (
                 <p className="mt-3 text-sm text-green-700">
-                  승인되었습니다. 수업 일정이 생성되어 강사 배정이 진행됩니다.
+                  승인되었습니다. 프로그램별 수업 일정이 생성되어 강사 배정이
+                  진행됩니다.
                 </p>
               )}
             </li>
