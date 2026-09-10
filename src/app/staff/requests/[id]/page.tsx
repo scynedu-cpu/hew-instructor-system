@@ -74,6 +74,11 @@ export default async function StaffRequestDetailPage({
           {new Date(r.submitted_at).toLocaleString("ko-KR")}
           {r.submitted_by ? ` · ${r.submitted_by}` : ""}
         </Field>
+        {r.proxy_note && (
+          <Field label="대리입력 비고">
+            <span className="whitespace-pre-wrap">{r.proxy_note}</span>
+          </Field>
+        )}
         {r.reviewed_at && (
           <Field label="검토">
             {new Date(r.reviewed_at).toLocaleString("ko-KR")}

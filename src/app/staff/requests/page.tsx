@@ -15,7 +15,7 @@ const FILTERS: { key: RequestStatus | "all"; label: string }[] = [
 export default async function StaffRequestsPage({
   searchParams,
 }: PageProps<"/staff/requests">) {
-  const { status } = await searchParams;
+  const { status, proxy } = await searchParams;
   const active = (
     FILTERS.some((f) => f.key === status) ? status : "all"
   ) as RequestStatus | "all";
@@ -35,7 +35,21 @@ export default async function StaffRequestsPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold">교육 신청 관리</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">교육 신청 관리</h1>
+        <Link
+          href="/staff/requests/new"
+          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+        >
+          + 대리입력
+        </Link>
+      </div>
+
+      {proxy && (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          대리입력한 신청서를 저장했습니다. 아래 목록에서 검토·승인하세요.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-1 border-b border-border">
         {FILTERS.map((f) => {

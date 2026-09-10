@@ -9,8 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "fflate": "^0.8.3",
+    "hwp.js": "^0.0.3",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"

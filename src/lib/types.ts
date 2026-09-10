@@ -56,6 +56,7 @@ export interface SessionRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  proxy_note: string | null;
   created_at: string;
 }
 

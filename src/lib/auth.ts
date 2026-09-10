@@ -5,6 +5,8 @@ import type { AccountRole, AppAccount } from "@/lib/types";
 
 export const PREVIEW_SCHOOL_COOKIE = "hew_preview_school";
 export const PREVIEW_INSTRUCTOR_COOKIE = "hew_preview_instructor";
+/** 담당자 대리입력 모드 — 이 강사의 /instructor 화면을 staff 가 직접 편집 (작업지시서 #008) */
+export const PROXY_INSTRUCTOR_COOKIE = "hew_proxy_instructor";
 
 export interface CurrentUser {
   userId: string;
@@ -72,6 +74,8 @@ export interface InstructorContext {
   instructorId: string;
   instructorName: string;
   readOnly: boolean;
+  /** staff 가 대리입력 모드로 편집 중 (readOnly=false, 하지만 본인 강사가 아님) */
+  proxy: boolean;
 }
 
 export async function getSchoolContext(): Promise<SchoolContext> {
@@ -125,11 +129,30 @@ export async function getInstructorContext(): Promise<InstructorContext> {
       instructorId: viewer.account.instructor_id,
       instructorName: data?.name ?? viewer.account.display_name ?? "강사",
       readOnly: false,
+      proxy: false,
     };
   }
 
   if (viewer.account.role === "staff") {
     const jar = await cookies();
+    // 대리입력 모드가 우선 (편집 가능)
+    const proxyId = jar.get(PROXY_INSTRUCTOR_COOKIE)?.value;
+    if (proxyId) {
+      const { data } = await supabase
+        .from("instructors")
+        .select("name")
+        .eq("id", proxyId)
+        .maybeSingle<{ name: string }>();
+      if (data) {
+        return {
+          viewer,
+          instructorId: proxyId,
+          instructorName: data.name,
+          readOnly: false,
+          proxy: true,
+        };
+      }
+    }
     const instructorId = jar.get(PREVIEW_INSTRUCTOR_COOKIE)?.value;
     if (!instructorId) redirect("/staff/preview?target=instructor");
     const { data } = await supabase
@@ -143,6 +166,7 @@ export async function getInstructorContext(): Promise<InstructorContext> {
       instructorId: instructorId!,
       instructorName: data.name,
       readOnly: true,
+      proxy: false,
     };
   }
 

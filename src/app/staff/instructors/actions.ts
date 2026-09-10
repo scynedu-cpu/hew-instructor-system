@@ -1,13 +1,185 @@
 "use server";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireRole, PROXY_INSTRUCTOR_COOKIE } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface InviteState {
   error?: string;
   ok?: string;
+}
+
+const PROXY_COOKIE_OPTS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: 60 * 60 * 8,
+};
+
+/** 대리입력 모드 진입 — 이 강사의 /instructor 화면을 staff 가 직접 편집 */
+export async function pickInstructorForEdit(formData: FormData) {
+  await requireRole("staff");
+  const id = String(formData.get("id") ?? "");
+  if (!id) redirect("/staff/instructors");
+  const jar = await cookies();
+  jar.set(PROXY_INSTRUCTOR_COOKIE, id, PROXY_COOKIE_OPTS);
+  redirect(`/staff/instructors/${id}/edit`);
+}
+
+/** 대리입력 모드 종료 */
+export async function stopProxyEdit() {
+  await requireRole("staff");
+  const jar = await cookies();
+  jar.delete(PROXY_INSTRUCTOR_COOKIE);
+  redirect("/staff/instructors");
+}
+
+export interface NewProfileState {
+  error?: string;
+}
+
+/** 계정·초대 없이 강사 프로필(instructors row)만 생성 → 바로 대리입력 편집으로 */
+export async function createInstructorProfile(
+  _prev: NewProfileState,
+  formData: FormData,
+): Promise<NewProfileState> {
+  await requireRole("staff");
+  const name = String(formData.get("name") ?? "").trim();
+  const mobile = String(formData.get("mobile_phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!name) return { error: "성명을 입력하세요." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("instructors")
+    .insert({
+      name,
+      mobile_phone: mobile || null,
+      email: email || null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: `생성 실패: ${error?.message ?? ""}` };
+
+  const jar = await cookies();
+  jar.set(PROXY_INSTRUCTOR_COOKIE, data.id, PROXY_COOKIE_OPTS);
+  revalidatePath("/staff/instructors");
+  redirect(`/staff/instructors/${data.id}/edit`);
+}
+
+export interface SaveProfileState {
+  error?: string;
+  ok?: string;
+}
+
+interface CareerItem {
+  year_month: string;
+  description: string;
+  issuing_org: string;
+}
+interface CertItem {
+  cert_name: string;
+  issued_date: string;
+  issuing_org: string;
+}
+
+/** 대리입력 통합 저장 — 기본정보 + 경력/자격증/전문분야 전체 교체 */
+export async function saveInstructorProfile(
+  instructorId: string,
+  payload: {
+    name: string;
+    birth_date: string;
+    address: string;
+    home_phone: string;
+    mobile_phone: string;
+    email: string;
+    career: CareerItem[];
+    certs: CertItem[];
+    specialties: string[];
+  },
+): Promise<SaveProfileState> {
+  await requireRole("staff");
+  if (!instructorId) return { error: "잘못된 요청입니다." };
+  const name = payload.name.trim();
+  if (!name) return { error: "성명은 필수입니다." };
+
+  const supabase = await createClient();
+
+  const { error: baseErr } = await supabase
+    .from("instructors")
+    .update({
+      name,
+      birth_date: payload.birth_date || null,
+      address: payload.address.trim() || null,
+      home_phone: payload.home_phone.trim() || null,
+      mobile_phone: payload.mobile_phone.trim() || null,
+      email: payload.email.trim() || null,
+    })
+    .eq("id", instructorId);
+  if (baseErr) return { error: baseErr.message };
+
+  // 경력 전체 교체
+  await supabase
+    .from("instructor_career_history")
+    .delete()
+    .eq("instructor_id", instructorId);
+  const career = payload.career
+    .filter((c) => c.description.trim())
+    .map((c) => ({
+      instructor_id: instructorId,
+      year_month: c.year_month.trim() || null,
+      description: c.description.trim(),
+      issuing_org: c.issuing_org.trim() || null,
+    }));
+  if (career.length > 0) {
+    const { error } = await supabase
+      .from("instructor_career_history")
+      .insert(career);
+    if (error) return { error: error.message };
+  }
+
+  // 자격증 전체 교체
+  await supabase
+    .from("instructor_certifications")
+    .delete()
+    .eq("instructor_id", instructorId);
+  const certs = payload.certs
+    .filter((c) => c.cert_name.trim())
+    .map((c) => ({
+      instructor_id: instructorId,
+      cert_name: c.cert_name.trim(),
+      issued_date: c.issued_date || null,
+      issuing_org: c.issuing_org.trim() || null,
+    }));
+  if (certs.length > 0) {
+    const { error } = await supabase
+      .from("instructor_certifications")
+      .insert(certs);
+    if (error) return { error: error.message };
+  }
+
+  // 전문분야 전체 교체
+  await supabase
+    .from("instructor_specialties")
+    .delete()
+    .eq("instructor_id", instructorId);
+  const specs = [...new Set(payload.specialties.map((s) => s.trim()).filter(Boolean))].map(
+    (specialty) => ({ instructor_id: instructorId, specialty }),
+  );
+  if (specs.length > 0) {
+    const { error } = await supabase
+      .from("instructor_specialties")
+      .insert(specs);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath(`/staff/instructors/${instructorId}/edit`);
+  revalidatePath("/staff/instructors");
+  return { ok: "저장했습니다." };
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
