@@ -3,6 +3,7 @@
 
 import { parse as parseHwp } from "hwp.js";
 import { unzipSync, strFromU8 } from "fflate";
+import * as CFB from "cfb";
 
 export const HWP_EXTENSIONS = [".hwp", ".hwpx"] as const;
 
@@ -44,18 +45,49 @@ function decodeXmlEntities(s: string): string {
     .replace(/&amp;/g, "&");
 }
 
-// ---- HWP 5.x: OLE 복합문서 → hwp.js 파싱 → 문단/표 텍스트 ----
+// ---- HWP 5.x: OLE 복합문서 ----
+// 1차: hwp.js 로 본문/표 전체 파싱. 실패(압축 형식 등)하면
+// 2차: OLE 의 PrvText(미리보기 텍스트, 무압축 UTF-16LE) 스트림으로 폴백.
 function extractHwp(buffer: Buffer): string {
-  // hwp.js 의 parse 는 CFB.read 옵션을 그대로 받는다. Node Buffer 는 type:"buffer".
-  const doc = parseHwp(buffer, { type: "buffer" });
-  const out: string[] = [];
-  for (const section of doc.sections ?? []) {
-    for (const paragraph of section.content ?? []) {
-      collectParagraph(paragraph, out);
+  try {
+    const doc = parseHwp(buffer, { type: "buffer" });
+    const out: string[] = [];
+    for (const section of doc.sections ?? []) {
+      for (const paragraph of section.content ?? []) {
+        collectParagraph(paragraph, out);
+      }
     }
+    const full = normalize(out.join("\n"));
+    if (full.trim().length > 0) return full;
+  } catch {
+    // 폴백으로
   }
-  return normalize(out.join("\n"));
+  const prv = extractHwpPrvText(buffer);
+  if (prv) return prv;
+  throw new Error(
+    "이 한글 문서에서 텍스트를 추출하지 못했습니다. 항목을 직접 입력하거나 사진으로 올려주세요.",
+  );
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function extractHwpPrvText(buffer: Buffer): string | null {
+  try {
+    const cfb = (CFB as any).read(buffer, { type: "buffer" });
+    const entry =
+      (CFB as any).find(cfb, "PrvText") ?? (CFB as any).find(cfb, "/PrvText");
+    if (!entry?.content) return null;
+    const raw = Buffer.from(entry.content as Uint8Array).toString("utf16le");
+    // PrvText 는 문단/표 셀이 <...> 로 감싸짐 → 마커 정리
+    const cleaned = raw
+      .replace(/<>/g, "")
+      .replace(/></g, " | ")
+      .replace(/[<>]/g, "");
+    return normalize(cleaned) || null;
+  } catch {
+    return null;
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function collectParagraph(paragraph: any, out: string[]): void {
