@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSchoolContext } from "@/lib/auth";
 import type { SessionRequestWithRefs } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 
 export default async function SchoolRequestsPage() {
+  const ctx = await getSchoolContext();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("session_requests")
     .select("*, program:programs(id,name,category)")
+    .eq("school_id", ctx.schoolId)
     .order("submitted_at", { ascending: false })
     .returns<SessionRequestWithRefs[]>();
 
@@ -17,12 +20,14 @@ export default async function SchoolRequestsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">교육 프로그램 신청</h1>
-        <Link
-          href="/school/new"
-          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
-        >
-          신규 신청
-        </Link>
+        {!ctx.readOnly && (
+          <Link
+            href="/school/new"
+            className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+          >
+            신규 신청
+          </Link>
+        )}
       </div>
 
       {error && (

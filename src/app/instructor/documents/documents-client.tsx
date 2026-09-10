@@ -20,13 +20,24 @@ export interface DocView {
   fileName: string | null;
 }
 
-export function DocumentsClient({ docs }: { docs: DocView[] }) {
+export function DocumentsClient({
+  docs,
+  readOnly = false,
+}: {
+  docs: DocView[];
+  readOnly?: boolean;
+}) {
   const byType = new Map(docs.map((d) => [d.doc_type, d]));
 
   return (
     <div className="flex flex-col gap-3">
       {DOC_TYPES.map((t) => (
-        <DocRow key={t} docType={t} current={byType.get(t) ?? null} />
+        <DocRow
+          key={t}
+          docType={t}
+          current={byType.get(t) ?? null}
+          readOnly={readOnly}
+        />
       ))}
     </div>
   );
@@ -35,9 +46,11 @@ export function DocumentsClient({ docs }: { docs: DocView[] }) {
 function DocRow({
   docType,
   current,
+  readOnly,
 }: {
   docType: DocType;
   current: DocView | null;
+  readOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [issuedAt, setIssuedAt] = useState("");
@@ -115,32 +128,34 @@ function DocRow({
           <span className="badge bg-zinc-100 text-zinc-500">미제출</span>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-              needsReupload
-                ? "bg-amber-500 text-white hover:bg-amber-600"
-                : "border border-border hover:bg-zinc-50"
-            }`}
-          >
-            {current ? "재업로드" : "업로드"}
-          </button>
-          {current && (
+        {!readOnly && (
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              disabled={pending}
-              onClick={remove}
-              className="text-xs text-muted hover:text-red-600"
+              onClick={() => setOpen((v) => !v)}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                needsReupload
+                  ? "bg-amber-500 text-white hover:bg-amber-600"
+                  : "border border-border hover:bg-zinc-50"
+              }`}
             >
-              삭제
+              {current ? "재업로드" : "업로드"}
             </button>
-          )}
-        </div>
+            {current && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={remove}
+                className="text-xs text-muted hover:text-red-600"
+              >
+                삭제
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {open && (
+      {!readOnly && open && (
         <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-border pt-3">
           <label className="flex flex-col gap-1 text-xs text-muted">
             발급일{hasExpiry(docType) && <span className="text-red-600"> *</span>}

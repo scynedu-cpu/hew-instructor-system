@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { getInstructorContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { DocumentRow } from "@/lib/types";
 import { DocumentsClient, type DocView } from "./documents-client";
@@ -6,13 +6,13 @@ import { DocumentsClient, type DocView } from "./documents-client";
 const BUCKET = "instructor-documents";
 
 export default async function InstructorDocumentsPage() {
-  const { account } = await requireRole("instructor");
+  const ctx = await getInstructorContext();
   const supabase = await createClient();
 
   const { data: rows } = await supabase
     .from("instructor_documents")
     .select("*")
-    .eq("instructor_id", account.instructor_id!)
+    .eq("instructor_id", ctx.instructorId)
     .order("created_at", { ascending: false })
     .returns<DocumentRow[]>();
 
@@ -45,7 +45,7 @@ export default async function InstructorDocumentsPage() {
           표시됩니다.
         </p>
       </div>
-      <DocumentsClient docs={docs} />
+      <DocumentsClient docs={docs} readOnly={ctx.readOnly} />
     </div>
   );
 }

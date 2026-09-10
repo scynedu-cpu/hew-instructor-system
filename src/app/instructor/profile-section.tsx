@@ -11,7 +11,13 @@ function maskAccount(v: string): string {
   return `${"•".repeat(Math.max(digits.length - 4, 3))}${digits.slice(-4)}`;
 }
 
-export function ProfileSection({ instructor }: { instructor: Instructor }) {
+export function ProfileSection({
+  instructor,
+  readOnly = false,
+}: {
+  instructor: Instructor;
+  readOnly?: boolean;
+}) {
   const [form, setForm] = useState({
     name: instructor.name ?? "",
     mobile_phone: instructor.mobile_phone ?? "",
@@ -63,6 +69,7 @@ export function ProfileSection({ instructor }: { instructor: Instructor }) {
     <section className="rounded-lg border border-border bg-surface p-4">
       <h2 className="mb-3 font-semibold">기본 프로필</h2>
 
+      <fieldset disabled={readOnly} className="contents">
       <div className="flex flex-col gap-4 sm:flex-row">
         {/* 사진 */}
         <div className="flex flex-col items-center gap-2">
@@ -81,14 +88,16 @@ export function ProfileSection({ instructor }: { instructor: Instructor }) {
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={pending}
-            className="text-xs text-brand hover:underline disabled:opacity-60"
-          >
-            사진 변경
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={pending}
+              className="text-xs text-brand hover:underline disabled:opacity-60"
+            >
+              사진 변경
+            </button>
+          )}
           <input
             ref={fileRef}
             type="file"
@@ -146,7 +155,11 @@ export function ProfileSection({ instructor }: { instructor: Instructor }) {
             />
           </Field>
           <Field label="계좌(통장) 번호">
-            {revealAccount ? (
+            {readOnly ? (
+              <span className="rounded border border-border px-2 py-1.5 text-sm">
+                {form.bank_account ? maskAccount(form.bank_account) : "미등록"}
+              </span>
+            ) : revealAccount ? (
               <div className="flex gap-2">
                 <input
                   value={form.bank_account}
@@ -179,17 +192,20 @@ export function ProfileSection({ instructor }: { instructor: Instructor }) {
           </Field>
         </div>
       </div>
+      </fieldset>
 
       <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!canSave || pending}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? "저장 중…" : "프로필 저장"}
-        </button>
-        {!canSave && (
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!canSave || pending}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "저장 중…" : "프로필 저장"}
+          </button>
+        )}
+        {!readOnly && !canSave && (
           <span className="text-xs text-amber-700">
             성명·휴대전화는 필수입니다.
           </span>

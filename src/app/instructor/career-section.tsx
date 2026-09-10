@@ -4,9 +4,16 @@ import type { CareerRow } from "@/lib/types";
 import { EditableList } from "./editable-list";
 import { addCareer, updateCareer, deleteCareer } from "./actions";
 
-export function CareerSection({ items }: { items: CareerRow[] }) {
+export function CareerSection({
+  items,
+  readOnly,
+}: {
+  items: CareerRow[];
+  readOnly?: boolean;
+}) {
   return (
     <EditableList
+      readOnly={readOnly}
       title="학력 및 경력사항"
       fields={[
         { key: "year_month", label: "연월", placeholder: "2020/03" },

@@ -15,7 +15,13 @@ const SUGGESTIONS = [
   "빅데이터",
 ];
 
-export function SpecialtySection({ items }: { items: SpecialtyRow[] }) {
+export function SpecialtySection({
+  items,
+  readOnly = false,
+}: {
+  items: SpecialtyRow[];
+  readOnly?: boolean;
+}) {
   const [input, setInput] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -55,19 +61,22 @@ export function SpecialtySection({ items }: { items: SpecialtyRow[] }) {
             className="badge bg-blue-50 text-blue-700"
           >
             {s.specialty}
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => remove(s.id)}
-              className="ml-1 text-blue-400 hover:text-red-600"
-              aria-label={`${s.specialty} 삭제`}
-            >
-              ×
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => remove(s.id)}
+                className="ml-1 text-blue-400 hover:text-red-600"
+                aria-label={`${s.specialty} 삭제`}
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
       </div>
 
+      {!readOnly && (
       <div className="mt-3 flex gap-2">
         <input
           list="specialty-suggestions"
@@ -96,6 +105,7 @@ export function SpecialtySection({ items }: { items: SpecialtyRow[] }) {
           추가
         </button>
       </div>
+      )}
 
       {msg && (
         <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">

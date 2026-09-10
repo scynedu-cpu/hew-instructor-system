@@ -2,19 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { getInstructorContext } from "@/lib/auth";
 
 export interface ActionResult {
   error?: string;
 }
 
+const READ_ONLY: ActionResult = {
+  error: "담당자 미리보기 모드에서는 수정할 수 없습니다.",
+};
+
 async function ctx() {
-  const { account } = await requireRole("instructor");
-  if (!account.instructor_id) {
-    throw new Error("계정에 연결된 강사 정보가 없습니다.");
-  }
+  const c = await getInstructorContext();
   const supabase = await createClient();
-  return { supabase, instructorId: account.instructor_id };
+  return { supabase, instructorId: c.instructorId, readOnly: c.readOnly };
 }
 
 /* ---------------- 기본 프로필 ---------------- */
@@ -30,7 +31,8 @@ export interface ProfileInput {
 }
 
 export async function saveProfile(input: ProfileInput): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
 
   const name = input.name.trim();
   const mobile = input.mobile_phone.trim();
@@ -56,7 +58,8 @@ export async function saveProfile(input: ProfileInput): Promise<ActionResult> {
 }
 
 export async function uploadPhoto(formData: FormData): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "파일을 선택하세요." };
@@ -91,7 +94,8 @@ export interface CareerInput {
 }
 
 export async function addCareer(input: CareerInput): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   if (!input.description.trim()) return { error: "내용을 입력하세요." };
   const { error } = await supabase.from("instructor_career_history").insert({
     instructor_id: instructorId,
@@ -108,7 +112,8 @@ export async function updateCareer(
   id: string,
   input: CareerInput,
 ): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   if (!input.description.trim()) return { error: "내용을 입력하세요." };
   const { error } = await supabase
     .from("instructor_career_history")
@@ -125,7 +130,8 @@ export async function updateCareer(
 }
 
 export async function deleteCareer(id: string): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   const { error } = await supabase
     .from("instructor_career_history")
     .delete()
@@ -145,7 +151,8 @@ export interface CertInput {
 }
 
 export async function addCert(input: CertInput): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   if (!input.cert_name.trim()) return { error: "자격증명을 입력하세요." };
   const { error } = await supabase.from("instructor_certifications").insert({
     instructor_id: instructorId,
@@ -162,7 +169,8 @@ export async function updateCert(
   id: string,
   input: CertInput,
 ): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   if (!input.cert_name.trim()) return { error: "자격증명을 입력하세요." };
   const { error } = await supabase
     .from("instructor_certifications")
@@ -179,7 +187,8 @@ export async function updateCert(
 }
 
 export async function deleteCert(id: string): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   const { error } = await supabase
     .from("instructor_certifications")
     .delete()
@@ -193,7 +202,8 @@ export async function deleteCert(id: string): Promise<ActionResult> {
 /* ---------------- 전문분야 ---------------- */
 
 export async function addSpecialty(specialty: string): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   const s = specialty.trim();
   if (!s) return { error: "전문분야를 입력하세요." };
 
@@ -214,7 +224,8 @@ export async function addSpecialty(specialty: string): Promise<ActionResult> {
 }
 
 export async function removeSpecialty(id: string): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
   const { error } = await supabase
     .from("instructor_specialties")
     .delete()

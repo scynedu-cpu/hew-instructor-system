@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { getSchoolContext } from "@/lib/auth";
 
 export interface RequestFormState {
   error?: string;
@@ -13,9 +13,9 @@ export async function submitRequest(
   _prev: RequestFormState,
   formData: FormData,
 ): Promise<RequestFormState> {
-  const { account } = await requireRole("school");
-  if (!account.school_id) {
-    return { error: "계정에 연결된 학교가 없습니다. 담당자에게 문의하세요." };
+  const ctx = await getSchoolContext();
+  if (ctx.readOnly) {
+    return { error: "담당자 미리보기 모드에서는 신청서를 제출할 수 없습니다." };
   }
 
   const programId = String(formData.get("program_id") ?? "").trim();
@@ -39,7 +39,7 @@ export async function submitRequest(
 
   const supabase = await createClient();
   const { error } = await supabase.from("session_requests").insert({
-    school_id: account.school_id,
+    school_id: ctx.schoolId,
     program_id: programId,
     academic_year: new Date().getFullYear(),
     requested_dates: dates,
@@ -48,7 +48,7 @@ export async function submitRequest(
     required_specialty: requiredSpecialty,
     required_instructor_count: requiredInstructorCount,
     request_status: "submitted",
-    submitted_by: account.display_name,
+    submitted_by: ctx.viewer.account.display_name,
   });
 
   if (error) {

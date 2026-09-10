@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { getInstructorContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type {
   CareerRow,
@@ -12,13 +12,14 @@ import { CertSection } from "./cert-section";
 import { SpecialtySection } from "./specialty-section";
 
 export default async function InstructorProfilePage() {
-  const { account } = await requireRole("instructor");
+  const ctx = await getInstructorContext();
   const supabase = await createClient();
+  const readOnly = ctx.readOnly;
 
   const { data: instructor } = await supabase
     .from("instructors")
     .select("*")
-    .eq("id", account.instructor_id!)
+    .eq("id", ctx.instructorId)
     .maybeSingle<Instructor>();
 
   if (!instructor) {
@@ -54,10 +55,10 @@ export default async function InstructorProfilePage() {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-xl font-bold">강사 기본 정보</h1>
-      <ProfileSection instructor={instructor} />
-      <CareerSection items={career ?? []} />
-      <CertSection items={certs ?? []} />
-      <SpecialtySection items={specialties ?? []} />
+      <ProfileSection instructor={instructor} readOnly={readOnly} />
+      <CareerSection items={career ?? []} readOnly={readOnly} />
+      <CertSection items={certs ?? []} readOnly={readOnly} />
+      <SpecialtySection items={specialties ?? []} readOnly={readOnly} />
     </div>
   );
 }

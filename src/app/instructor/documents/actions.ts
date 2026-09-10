@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { getInstructorContext } from "@/lib/auth";
 import { DOC_TYPES, type DocType } from "@/lib/documents";
 
 const BUCKET = "instructor-documents";
@@ -11,11 +11,14 @@ export interface ActionResult {
   error?: string;
 }
 
+const READ_ONLY: ActionResult = {
+  error: "담당자 미리보기 모드에서는 수정할 수 없습니다.",
+};
+
 async function ctx() {
-  const { account } = await requireRole("instructor");
-  if (!account.instructor_id) throw new Error("강사 정보가 없습니다.");
+  const c = await getInstructorContext();
   const supabase = await createClient();
-  return { supabase, instructorId: account.instructor_id };
+  return { supabase, instructorId: c.instructorId, readOnly: c.readOnly };
 }
 
 function safeName(name: string) {
@@ -25,7 +28,8 @@ function safeName(name: string) {
 }
 
 export async function uploadDocument(formData: FormData): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
 
   const docType = String(formData.get("doc_type") ?? "") as DocType;
   const issuedAtRaw = String(formData.get("issued_at") ?? "").trim();
@@ -82,7 +86,8 @@ export async function uploadDocument(formData: FormData): Promise<ActionResult> 
 }
 
 export async function deleteDocument(id: string): Promise<ActionResult> {
-  const { supabase, instructorId } = await ctx();
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
 
   const { data: row } = await supabase
     .from("instructor_documents")

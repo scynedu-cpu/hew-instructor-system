@@ -20,6 +20,7 @@ export function EditableList({
   onAdd,
   onUpdate,
   onDelete,
+  readOnly = false,
 }: {
   title: string;
   fields: FieldDef[];
@@ -27,6 +28,7 @@ export function EditableList({
   onAdd: (values: Values) => Promise<Result>;
   onUpdate: (id: string, values: Values) => Promise<Result>;
   onDelete: (id: string) => Promise<Result>;
+  readOnly?: boolean;
 }) {
   const [adding, setAdding] = useState<Values>(emptyValues(fields));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export function EditableList({
                   {f.required && <span className="text-red-600"> *</span>}
                 </th>
               ))}
-              <th className="px-2 py-1" />
+              {!readOnly && <th className="px-2 py-1" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -72,7 +74,7 @@ export function EditableList({
               </tr>
             )}
             {items.map((item) => {
-              const isEditing = editingId === item.id;
+              const isEditing = !readOnly && editingId === item.id;
               return (
                 <tr key={item.id}>
                   {fields.map((f) => (
@@ -95,6 +97,7 @@ export function EditableList({
                       )}
                     </td>
                   ))}
+                  {readOnly ? null : (
                   <td className="whitespace-nowrap px-2 py-1.5 text-right">
                     {isEditing ? (
                       <>
@@ -143,6 +146,7 @@ export function EditableList({
                       </>
                     )}
                   </td>
+                  )}
                 </tr>
               );
             })}
@@ -151,6 +155,7 @@ export function EditableList({
       </div>
 
       {/* 추가 폼 */}
+      {!readOnly && (
       <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-border pt-3">
         {fields.map((f) => (
           <label key={f.key} className="flex flex-col gap-1 text-xs text-muted">
@@ -180,6 +185,7 @@ export function EditableList({
           추가
         </button>
       </div>
+      )}
 
       {msg && (
         <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">

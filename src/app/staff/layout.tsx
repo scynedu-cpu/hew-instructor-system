@@ -13,6 +13,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
         { href: "/staff/assignments", label: "강사 배정" },
         { href: "/staff/calendar", label: "캘린더" },
         { href: "/staff/instructors", label: "강사 계정" },
+        { href: "/staff/preview", label: "학교·강사 미리보기" },
       ]}
     >
       {children}

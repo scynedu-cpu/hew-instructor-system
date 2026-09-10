@@ -4,9 +4,16 @@ import type { CertRow } from "@/lib/types";
 import { EditableList } from "./editable-list";
 import { addCert, updateCert, deleteCert } from "./actions";
 
-export function CertSection({ items }: { items: CertRow[] }) {
+export function CertSection({
+  items,
+  readOnly,
+}: {
+  items: CertRow[];
+  readOnly?: boolean;
+}) {
   return (
     <EditableList
+      readOnly={readOnly}
       title="자격증"
       fields={[
         { key: "cert_name", label: "자격증명", required: true },
