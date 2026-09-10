@@ -240,6 +240,54 @@ export interface TimeConflict {
   session_status: string;
 }
 
+// ---- 작업지시서 #007: 강사료 정산 ----
+
+export interface PaymentRateSetting {
+  id: string;
+  rate: number;
+  effective_from: string;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type PaymentStatus = "pending" | "paid";
+
+export interface Payment {
+  id: string;
+  instructor_id: string;
+  period_start: string;
+  period_end: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  payment_status: PaymentStatus;
+  settled_by: string | null;
+  settled_at: string | null;
+  paid_by: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PaymentWithInstructor extends Payment {
+  instructor: Pick<Instructor, "id" | "name"> | null;
+}
+
+/** 정산 상세: 포함된 개별 강의 */
+export interface PaymentLectureItem {
+  lecture_confirmation_id: string;
+  actual_date: string | null;
+  actual_hours: number | null;
+  school_name: string;
+  program_name: string;
+}
+
+export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  pending: "지급대기",
+  paid: "지급완료",
+};
+
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   unassigned: "미배정",
   provisional: "임시배정",
