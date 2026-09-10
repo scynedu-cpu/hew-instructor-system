@@ -128,6 +128,7 @@ export interface DocumentRow {
   expires_at: string | null;
   status: "valid" | "expiring_soon" | "expired";
   expiry_notified_at: string | null;
+  expired_notified_at: string | null;
   created_at: string;
 }
 

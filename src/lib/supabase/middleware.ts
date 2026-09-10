@@ -35,7 +35,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = pathname === "/login" || pathname.startsWith("/auth");
+  // /api/* 는 각 라우트가 자체 인증(예: CRON_SECRET)을 하므로 세션 리다이렉트 대상에서 제외
+  const isPublic =
+    pathname === "/login" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
