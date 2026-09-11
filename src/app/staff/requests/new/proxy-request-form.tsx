@@ -42,13 +42,16 @@ export function ProxyRequestForm({
     items.every((i) => i.dates_tbd || i.requested_dates.some((d) => d.trim()));
 
   const matchProgram = useMemo(() => {
+    // AI가 뽑은 이름과 DB 프로그램명은 띄어쓰기가 다를 수 있다(예: "전환기프로그램"
+    // vs "전환기 프로그램") → 공백을 제거하고 비교해야 매칭이 안정적이다.
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
     return (raw: string): Program | undefined => {
-      const q = raw.trim().toLowerCase();
+      const q = norm(raw);
       if (!q) return undefined;
       const hay = (p: Program) =>
         [p.matching_keyword, p.sub_program, p.category, p.name]
           .filter(Boolean)
-          .map((s) => String(s).toLowerCase());
+          .map((s) => norm(String(s)));
       // 정확/포함 매칭 우선
       return (
         programs.find((p) => hay(p).some((h) => h === q)) ??
