@@ -106,15 +106,25 @@ export default async function StaffInstructorsPage() {
                   {new Date(r.created_at).toLocaleDateString("ko-KR")}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <form action={pickInstructorForEdit}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <button
-                      type="submit"
-                      className="font-medium text-brand hover:underline"
-                    >
-                      대리입력
-                    </button>
-                  </form>
+                  <div className="flex items-center justify-end gap-3">
+                    {r.accountState === "계정 없음" && (
+                      <Link
+                        href={`/staff/instructors/${r.id}/invite`}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        계정 초대
+                      </Link>
+                    )}
+                    <form action={pickInstructorForEdit}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button
+                        type="submit"
+                        className="font-medium text-brand hover:underline"
+                      >
+                        대리입력
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -191,6 +191,14 @@ async function appOrigin() {
   return `${proto}://${host}`;
 }
 
+/**
+ * 강사 초대 — 작업지시서 #003-2.
+ * `instructor_id` 가 넘어오면(강사 목록의 "계정 초대" 버튼) 대리입력으로 이미
+ * 등록해둔 그 `instructors` row 에 계정을 연결한다(새 row 를 만들지 않음) —
+ * 그래야 이미 입력해둔 경력·자격증·전문분야·서류가 강사 본인 로그인 후에도
+ * 그대로 보인다. `instructor_id` 없이(완전 신규 강사) 호출되면 기존처럼
+ * `instructors` row 를 새로 만든다.
+ */
 export async function inviteInstructor(
   _prev: InviteState,
   formData: FormData,
@@ -201,20 +209,78 @@ export async function inviteInstructor(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
+  const instructorId = String(formData.get("instructor_id") ?? "").trim() || null;
 
   if (!name) return { error: "성명을 입력하세요." };
   if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
 
   const admin = createAdminClient();
 
-  // 중복 확인 — 이미 이 이메일의 강사가 등록/초대돼 있는지
-  const { data: dupe } = await admin
-    .from("instructors")
-    .select("id")
-    .ilike("email", email)
-    .limit(1);
-  if (dupe && dupe.length > 0) {
-    return { error: "이미 등록되었거나 초대된 이메일입니다." };
+  if (instructorId) {
+    // 기존 프로필에 계정 연결 ------------------------------------------------
+    const { data: target } = await admin
+      .from("instructors")
+      .select("id")
+      .eq("id", instructorId)
+      .maybeSingle();
+    if (!target) return { error: "대상 강사를 찾을 수 없습니다." };
+
+    const { data: existingAcc } = await admin
+      .from("app_accounts")
+      .select("id")
+      .eq("instructor_id", instructorId)
+      .maybeSingle();
+    if (existingAcc) return { error: "이미 계정이 발급된 강사입니다." };
+
+    const { data: dupe } = await admin
+      .from("instructors")
+      .select("id")
+      .ilike("email", email)
+      .neq("id", instructorId)
+      .limit(1);
+    if (dupe && dupe.length > 0) {
+      return { error: "이미 등록되었거나 초대된 이메일입니다." };
+    }
+  } else {
+    // 완전 신규 강사 ---------------------------------------------------------
+    // 이메일 중복
+    const { data: dupe } = await admin
+      .from("instructors")
+      .select("id")
+      .ilike("email", email)
+      .limit(1);
+    if (dupe && dupe.length > 0) {
+      return { error: "이미 등록되었거나 초대된 이메일입니다." };
+    }
+    // 동명(同名) 계정 없는 프로필이 이미 있으면 중복 생성 방지 — 강사 목록에서
+    // "계정 초대"로 진행하도록 안내
+    const { data: sameName } = await admin
+      .from("instructors")
+      .select("id")
+      .eq("name", name);
+    if (sameName && sameName.length > 0) {
+      const ids = sameName.map((r) => r.id);
+      const { data: accs } = await admin
+        .from("app_accounts")
+        .select("instructor_id")
+        .in("instructor_id", ids);
+      const linkedIds = new Set((accs ?? []).map((a) => a.instructor_id));
+      if (sameName.some((r) => !linkedIds.has(r.id))) {
+        return {
+          error: `이미 '${name}' 강사가 프로필로 등록되어 있습니다. 강사 목록에서 이 강사의 "계정 초대" 버튼으로 진행하세요.`,
+        };
+      }
+    }
+  }
+
+  // 기존 프로필이면 초대 전에 이름·이메일을 먼저 반영(안전한 메타데이터 수정 —
+  // 이후 단계가 실패해도 굳이 되돌릴 필요 없음)
+  if (instructorId) {
+    const { error: updErr } = await admin
+      .from("instructors")
+      .update({ name, email })
+      .eq("id", instructorId);
+    if (updErr) return { error: `강사 정보 갱신 실패: ${updErr.message}` };
   }
 
   const redirectTo = `${await appOrigin()}/auth/set-password`;
@@ -239,28 +305,37 @@ export async function inviteInstructor(
 
   const userId = invited.user.id;
 
-  // 2) instructors row (성명·이메일만)
-  const { data: ins, error: insErr } = await admin
-    .from("instructors")
-    .insert({ name, email })
-    .select("id")
-    .single();
-
-  if (insErr || !ins) {
-    await admin.auth.admin.deleteUser(userId);
-    return { error: `강사 등록 실패: ${insErr?.message ?? ""}` };
+  // 2) instructors row — 기존 프로필이면 재사용, 아니면 새로 생성(성명·이메일만)
+  let targetInstructorId: string;
+  if (instructorId) {
+    targetInstructorId = instructorId;
+  } else {
+    const { data: ins, error: insErr } = await admin
+      .from("instructors")
+      .insert({ name, email })
+      .select("id")
+      .single();
+    if (insErr || !ins) {
+      await admin.auth.admin.deleteUser(userId);
+      return { error: `강사 등록 실패: ${insErr?.message ?? ""}` };
+    }
+    targetInstructorId = ins.id;
   }
 
   // 3) app_accounts 매핑
   const { error: accErr } = await admin.from("app_accounts").insert({
     id: userId,
     role: "instructor",
-    instructor_id: ins.id,
+    instructor_id: targetInstructorId,
     display_name: name,
   });
 
   if (accErr) {
-    await admin.from("instructors").delete().eq("id", ins.id);
+    // 기존 프로필(instructorId 있음)은 강사가 미리 입력해둔 실제 데이터라
+    // 지우지 않는다 — auth user 만 롤백
+    if (!instructorId) {
+      await admin.from("instructors").delete().eq("id", targetInstructorId);
+    }
     await admin.auth.admin.deleteUser(userId);
     return { error: `계정 연결 실패: ${accErr.message}` };
   }
