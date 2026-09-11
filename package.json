@@ -26,5 +26,14 @@
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "kordoc": {
+      "sharp": "file:../../vendor-stubs/sharp",
+      "onnxruntime-node": "file:../../vendor-stubs/onnxruntime-node",
+      "@huggingface/transformers": "file:../../vendor-stubs/huggingface-transformers",
+      "@hyzyla/pdfium": "file:../../vendor-stubs/hyzyla-pdfium",
+      "pdfjs-dist": "file:../../vendor-stubs/pdfjs-dist"
+    }
   }
 }
