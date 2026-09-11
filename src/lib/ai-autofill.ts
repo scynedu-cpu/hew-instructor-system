@@ -5,7 +5,7 @@
 // 민감정보 원칙: 주민등록번호·계좌번호 등은 추출하지 않는다(프롬프트에서 금지).
 
 import Anthropic from "@anthropic-ai/sdk";
-import { extractHwpDocumentText, isHwpFilename } from "@/lib/hwp";
+import { parseHwpDocument, isHwpFilename } from "@/lib/hwp";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 const MAX_TEXT = 40_000;
@@ -18,6 +18,8 @@ export interface AutofillResult {
   source: AutofillSource;
   fields: Record<string, unknown>;
   textPreview: string | null;
+  /** 오른쪽 "원본 미리보기" 용 완성된 HTML(hwp/hwpx 일 때만; iframe 에 그대로 표시) */
+  previewHtml: string | null;
   simulated: boolean;
 }
 
@@ -217,12 +219,15 @@ export async function autofillFromFile(
   }
 
   let text: string | null = null;
+  let previewHtml: string | null = null;
   if (isHwp) {
-    text = extractHwpDocumentText(buffer, filename);
+    const parsed = await parseHwpDocument(buffer);
+    text = parsed.markdown;
+    previewHtml = parsed.html;
     if (!text.trim()) throw new Error("문서에서 텍스트를 추출하지 못했습니다.");
   }
   const source: AutofillSource = isHwp ? "hwp" : "image";
-  const textPreview = text ? text.slice(0, 20_000) : null; // 오른쪽 원본 대조용
+  const textPreview = text ? text.slice(0, 20_000) : null; // 오른쪽 원본 대조용(폴백용)
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -232,6 +237,7 @@ export async function autofillFromFile(
         source,
         fields: mockFields(kind, source, text),
         textPreview,
+        previewHtml,
         simulated: true,
       };
     }
@@ -278,5 +284,12 @@ export async function autofillFromFile(
     .map((b) => b.text)
     .join("");
 
-  return { kind, source, fields: parseJsonObject(out), textPreview, simulated: false };
+  return {
+    kind,
+    source,
+    fields: parseJsonObject(out),
+    textPreview,
+    previewHtml,
+    simulated: false,
+  };
 }

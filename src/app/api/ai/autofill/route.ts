@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { autofillFromFile, type AutofillKind } from "@/lib/ai-autofill";
 
-export const runtime = "nodejs"; // hwp.js 가 'fs' 를 쓰므로 edge 불가
+export const runtime = "nodejs"; // kordoc 이 fs/네이티브 하위 의존성을 쓰므로 edge 불가
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 

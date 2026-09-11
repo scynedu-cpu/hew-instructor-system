@@ -4,7 +4,6 @@ import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Program, School } from "@/lib/types";
 import { AutofillPanel, type AutofillMeta } from "@/components/autofill-panel";
-import { HwpxPreview } from "@/components/hwpx-preview";
 import {
   ProgramItemsEditor,
   emptyItem,
@@ -29,9 +28,8 @@ export function ProxyRequestForm({
   const [note, setNote] = useState("");
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [preview, setPreview] = useState<{
-    kind: "text" | "image" | "hwpx";
+    kind: "text" | "image" | "html";
     content: string;
-    file: File | null;
     fileName: string;
     simulated: boolean;
   } | null>(null);
@@ -61,21 +59,19 @@ export function ProxyRequestForm({
   }, [programs]);
 
   function applyAutofill(fields: Record<string, unknown>, meta: AutofillMeta) {
-    // 원본 미리보기 — 이미지는 그대로, hwpx 는 문단/표 구조를 다시 그림,
-    // 그 외(구형 .hwp 바이너리)는 서버가 추출한 텍스트로 대조
+    // 원본 미리보기 — 이미지는 그대로, hwp/hwpx 는 서버(kordoc)가 만든 완성된 HTML을
+    // iframe 에 그대로 표시(표 병합·rowspan/colspan 그대로 보존), 그 외는 텍스트로 대조
     if (meta.source === "image" && meta.imageDataUrl) {
       setPreview({
         kind: "image",
         content: meta.imageDataUrl,
-        file: meta.file,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
-    } else if (meta.source === "hwp" && /\.hwpx$/i.test(meta.fileName)) {
+    } else if (meta.source === "hwp" && meta.previewHtml) {
       setPreview({
-        kind: "hwpx",
-        content: meta.textPreview ?? "",
-        file: meta.file,
+        kind: "html",
+        content: meta.previewHtml,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
@@ -83,7 +79,6 @@ export function ProxyRequestForm({
       setPreview({
         kind: "text",
         content: meta.textPreview,
-        file: meta.file,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
@@ -218,7 +213,7 @@ export function ProxyRequestForm({
               </span>
             )}
           </div>
-          <div className="flex-1 overflow-auto p-3">
+          <div className={preview?.kind === "html" ? "flex-1" : "flex-1 overflow-auto p-3"}>
             {!preview ? (
               <p className="py-16 text-center text-sm text-muted">
                 왼쪽 <b>AI 자동채움</b>에서 한글 문서나 사진을 올리면 여기에 원본이
@@ -231,18 +226,18 @@ export function ProxyRequestForm({
                 alt="업로드 원본"
                 className="mx-auto max-w-full rounded"
               />
-            ) : preview.kind === "hwpx" && preview.file ? (
-              <HwpxPreview file={preview.file} fallbackText={preview.content} />
+            ) : preview.kind === "html" ? (
+              // 서버(kordoc)가 만든 완성된 HTML 문서 — 표 병합(rowspan/colspan) 그대로 보존.
+              // 우리 페이지 스타일과 섞이지 않도록 iframe 으로 격리해서 표시.
+              <iframe
+                srcDoc={preview.content}
+                title="원본 미리보기"
+                className="h-[75vh] w-full rounded-b-lg border-0 bg-white"
+              />
             ) : (
-              <>
-                <p className="mb-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
-                  이 한글(.hwp) 문서는 원본 서식 그대로 미리보기를 그릴 수 없어
-                  텍스트로 추출해 보여줍니다.
-                </p>
-                <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
-                  {preview.content}
-                </pre>
-              </>
+              <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
+                {preview.content}
+              </pre>
             )}
           </div>
         </div>

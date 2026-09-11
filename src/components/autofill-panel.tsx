@@ -6,11 +6,11 @@ export interface AutofillMeta {
   source: "hwp" | "image";
   simulated: boolean;
   textPreview: string | null;
+  /** 오른쪽 "원본 미리보기" 용 완성된 HTML (source==='hwp' 일 때; 서버가 kordoc 으로 생성) */
+  previewHtml: string | null;
   /** 이미지 원본 미리보기용 data URL (source==='image' 일 때) */
   imageDataUrl: string | null;
   fileName: string;
-  /** 업로드한 원본 파일 — 오른쪽 미리보기에서 hwpx 구조(표 포함)를 다시 그릴 때 사용 */
-  file: File;
 }
 
 function readAsDataUrl(file: File): Promise<string> {
@@ -64,9 +64,9 @@ export function AutofillPanel({
         source: data.source,
         simulated: !!data.simulated,
         textPreview: data.textPreview ?? null,
+        previewHtml: data.previewHtml ?? null,
         imageDataUrl,
         fileName: file.name,
-        file,
       });
       const src = data.source === "hwp" ? "한글 문서" : "이미지";
       setMsg(
