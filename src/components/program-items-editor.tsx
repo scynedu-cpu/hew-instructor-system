@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Program } from "@/lib/types";
 import { programLabel } from "@/lib/types";
 import type { RequestItemInput } from "@/lib/session-request";
@@ -31,6 +32,16 @@ export function ProgramItemsEditor({
   onChange: (items: ProgramItem[]) => void;
 }) {
   const selectedIds = new Set(value.map((i) => i.program_id));
+  // 처음 1건이라도 선택되면(AI 자동채움 또는 수동 클릭) "다른 프로그램 추가"
+  // 영역을 한 번 접어서, 실제 신청 중인 항목만 크게 보이도록 한다.
+  const [showPicker, setShowPicker] = useState(value.length === 0);
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    if (!autoCollapsedRef.current && value.length > 0) {
+      autoCollapsedRef.current = true;
+      setShowPicker(false);
+    }
+  }, [value.length]);
 
   function toggle(programId: string) {
     if (selectedIds.has(programId)) {
@@ -46,8 +57,10 @@ export function ProgramItemsEditor({
     );
   }
 
+  // 아직 선택 안 한 것만 "추가" 목록에 — 선택된 건 아래 카드로 이미 크게 보임
   const byCategory = new Map<string, Program[]>();
   for (const p of programs) {
+    if (selectedIds.has(p.id)) continue;
     const key = p.category ?? p.name;
     const arr = byCategory.get(key) ?? [];
     arr.push(p);
@@ -64,33 +77,37 @@ export function ProgramItemsEditor({
           신청 프로그램 <span className="text-red-600">*</span>{" "}
           <span className="font-normal text-muted">여러 개 선택 가능</span>
         </span>
-        {[...byCategory.entries()].map(([category, rows]) => (
-          <div key={category} className="rounded-md border border-border p-2">
-            <p className="mb-1 px-1 text-xs font-semibold text-muted">
-              {category}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {rows.map((p) => {
-                const on = selectedIds.has(p.id);
-                return (
+
+        {byCategory.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowPicker((v) => !v)}
+            className="self-start text-sm font-medium text-brand hover:underline"
+          >
+            {showPicker ? "▾" : "▸"} 다른 프로그램 추가
+          </button>
+        )}
+
+        {showPicker &&
+          [...byCategory.entries()].map(([category, rows]) => (
+            <div key={category} className="rounded-md border border-border p-2">
+              <p className="mb-1 px-1 text-xs font-semibold text-muted">
+                {category}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {rows.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => toggle(p.id)}
-                    className={`rounded-md border px-3 py-1.5 text-sm ${
-                      on
-                        ? "border-brand bg-blue-50 font-semibold text-brand"
-                        : "border-border hover:bg-zinc-50"
-                    }`}
+                    className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-zinc-50"
                   >
-                    {on ? "○ " : "＋ "}
-                    {p.sub_program ?? "(대분류)"}
+                    ＋ {p.sub_program ?? "(대분류)"}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {value.length === 0 && (
