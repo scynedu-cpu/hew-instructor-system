@@ -29,6 +29,26 @@ export async function pickInstructorForEdit(formData: FormData) {
   redirect(`/staff/instructors/${id}/edit`);
 }
 
+/**
+ * 대리입력 모드 안에서 사진/서류 화면으로 이동 — 작업지시서 #008-3.
+ * 대리입력 편집 화면의 "사진 업로드"/"제출 서류 입력" 버튼에서 호출한다.
+ * 편집 화면에 진입한 경로와 무관하게(직접 접속·새로고침 등) 쿠키를 그
+ * 강사 id 로 다시 맞춰준 뒤 이동해서, /instructor·/instructor/documents 의
+ * 대리입력 로직(app_accounts 와 무관, PROXY_INSTRUCTOR_COOKIE 만으로 동작)
+ * 이 엉뚱한 강사를 가리키는 일이 없게 한다.
+ */
+export async function enterInstructorProxy(formData: FormData) {
+  await requireRole("staff");
+  const id = String(formData.get("id") ?? "");
+  const target = String(formData.get("target") ?? "");
+  if (!id || (target !== "photo" && target !== "documents")) {
+    redirect("/staff/instructors");
+  }
+  const jar = await cookies();
+  jar.set(PROXY_INSTRUCTOR_COOKIE, id, PROXY_COOKIE_OPTS);
+  redirect(`/staff/instructors/${id}/${target}`);
+}
+
 /** 대리입력 모드 종료 */
 export async function stopProxyEdit() {
   await requireRole("staff");

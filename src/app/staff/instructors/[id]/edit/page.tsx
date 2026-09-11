@@ -9,7 +9,7 @@ import type {
   SpecialtyRow,
 } from "@/lib/types";
 import { InstructorProfileForm } from "@/components/instructor-profile-form";
-import { stopProxyEdit } from "../../actions";
+import { stopProxyEdit, enterInstructorProxy } from "../../actions";
 
 export default async function InstructorProxyEditPage({
   params,
@@ -74,18 +74,26 @@ export default async function InstructorProxyEditPage({
       </div>
 
       <div className="flex flex-wrap gap-2 text-sm">
-        <Link
-          href="/instructor"
-          className="rounded-md border border-border px-3 py-1.5 hover:bg-zinc-50"
-        >
-          사진 업로드 화면 →
-        </Link>
-        <Link
-          href="/instructor/documents"
-          className="rounded-md border border-border px-3 py-1.5 hover:bg-zinc-50"
-        >
-          제출 서류 입력 화면 →
-        </Link>
+        <form action={enterInstructorProxy}>
+          <input type="hidden" name="id" value={instructor.id} />
+          <input type="hidden" name="target" value="photo" />
+          <button
+            type="submit"
+            className="rounded-md border border-border px-3 py-1.5 hover:bg-zinc-50"
+          >
+            사진 업로드 화면 →
+          </button>
+        </form>
+        <form action={enterInstructorProxy}>
+          <input type="hidden" name="id" value={instructor.id} />
+          <input type="hidden" name="target" value="documents" />
+          <button
+            type="submit"
+            className="rounded-md border border-border px-3 py-1.5 hover:bg-zinc-50"
+          >
+            제출 서류 입력 화면 →
+          </button>
+        </form>
       </div>
 
       <InstructorProfileForm

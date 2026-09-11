@@ -1,39 +1,12 @@
 import { getInstructorContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { DocumentRow } from "@/lib/types";
-import { DocumentsClient, type DocView } from "./documents-client";
-
-const BUCKET = "instructor-documents";
+import { loadInstructorDocuments } from "@/lib/instructor-documents";
+import { DocumentsClient } from "./documents-client";
 
 export default async function InstructorDocumentsPage() {
   const ctx = await getInstructorContext();
   const supabase = await createClient();
-
-  const { data: rows } = await supabase
-    .from("instructor_documents")
-    .select("*")
-    .eq("instructor_id", ctx.instructorId)
-    .order("created_at", { ascending: false })
-    .returns<DocumentRow[]>();
-
-  const docs: DocView[] = [];
-  for (const r of rows ?? []) {
-    let signedUrl: string | null = null;
-    if (r.file_url) {
-      const { data } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(r.file_url, 60 * 60);
-      signedUrl = data?.signedUrl ?? null;
-    }
-    docs.push({
-      id: r.id,
-      doc_type: r.doc_type,
-      issued_at: r.issued_at,
-      expires_at: r.expires_at,
-      signedUrl,
-      fileName: r.file_url?.split("/").pop() ?? null,
-    });
-  }
+  const docs = await loadInstructorDocuments(supabase, ctx.instructorId);
 
   return (
     <div className="flex flex-col gap-5">
