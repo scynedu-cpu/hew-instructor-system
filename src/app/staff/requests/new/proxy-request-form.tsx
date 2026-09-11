@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Program, School } from "@/lib/types";
 import { AutofillPanel, type AutofillMeta } from "@/components/autofill-panel";
+import { HwpxPreview } from "@/components/hwpx-preview";
 import {
   ProgramItemsEditor,
   emptyItem,
@@ -28,8 +29,9 @@ export function ProxyRequestForm({
   const [note, setNote] = useState("");
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [preview, setPreview] = useState<{
-    kind: "text" | "image";
+    kind: "text" | "image" | "hwpx";
     content: string;
+    file: File | null;
     fileName: string;
     simulated: boolean;
   } | null>(null);
@@ -56,11 +58,21 @@ export function ProxyRequestForm({
   }, [programs]);
 
   function applyAutofill(fields: Record<string, unknown>, meta: AutofillMeta) {
-    // 원본 미리보기
+    // 원본 미리보기 — 이미지는 그대로, hwpx 는 문단/표 구조를 다시 그림,
+    // 그 외(구형 .hwp 바이너리)는 서버가 추출한 텍스트로 대조
     if (meta.source === "image" && meta.imageDataUrl) {
       setPreview({
         kind: "image",
         content: meta.imageDataUrl,
+        file: meta.file,
+        fileName: meta.fileName,
+        simulated: meta.simulated,
+      });
+    } else if (meta.source === "hwp" && /\.hwpx$/i.test(meta.fileName)) {
+      setPreview({
+        kind: "hwpx",
+        content: meta.textPreview ?? "",
+        file: meta.file,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
@@ -68,6 +80,7 @@ export function ProxyRequestForm({
       setPreview({
         kind: "text",
         content: meta.textPreview,
+        file: meta.file,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
@@ -215,10 +228,18 @@ export function ProxyRequestForm({
                 alt="업로드 원본"
                 className="mx-auto max-w-full rounded"
               />
+            ) : preview.kind === "hwpx" && preview.file ? (
+              <HwpxPreview file={preview.file} fallbackText={preview.content} />
             ) : (
-              <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
-                {preview.content}
-              </pre>
+              <>
+                <p className="mb-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+                  이 한글(.hwp) 문서는 원본 서식 그대로 미리보기를 그릴 수 없어
+                  텍스트로 추출해 보여줍니다.
+                </p>
+                <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
+                  {preview.content}
+                </pre>
+              </>
             )}
           </div>
         </div>

@@ -9,6 +9,8 @@ export interface AutofillMeta {
   /** 이미지 원본 미리보기용 data URL (source==='image' 일 때) */
   imageDataUrl: string | null;
   fileName: string;
+  /** 업로드한 원본 파일 — 오른쪽 미리보기에서 hwpx 구조(표 포함)를 다시 그릴 때 사용 */
+  file: File;
 }
 
 function readAsDataUrl(file: File): Promise<string> {
@@ -64,6 +66,7 @@ export function AutofillPanel({
         textPreview: data.textPreview ?? null,
         imageDataUrl,
         fileName: file.name,
+        file,
       });
       const src = data.source === "hwp" ? "한글 문서" : "이미지";
       setMsg(
