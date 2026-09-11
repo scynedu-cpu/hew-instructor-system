@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { CareerRow, CertRow, Instructor } from "@/lib/types";
 import { AutofillPanel } from "@/components/autofill-panel";
-import { saveInstructorProfile } from "../../actions";
+import {
+  saveInstructorProfile,
+  createInstructorProfileFull,
+} from "@/app/staff/instructors/actions";
 
 type CareerItem = { year_month: string; description: string; issuing_org: string };
 type CertItem = { cert_name: string; issued_date: string; issuing_org: string };
@@ -15,23 +19,32 @@ function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-export function InstructorProxyForm({
+/**
+ * 강사 기본정보 + 경력/자격증/전문분야 대리입력 폼.
+ * `instructor` 가 있으면 기존 강사 수정(작업지시서 #008), 없으면 신규 생성
+ * (작업지시서 #008-2 "파일/사진으로 시작") — 저장 한 번으로 instructors row
+ * 와 하위 정보가 함께 생성되고, 이어서 대리입력 편집 화면으로 이동한다.
+ */
+export function InstructorProfileForm({
   instructor,
   career,
   certs,
   specialties,
 }: {
-  instructor: Instructor;
+  instructor: Instructor | null;
   career: CareerRow[];
   certs: CertRow[];
   specialties: string[];
 }) {
-  const [name, setName] = useState(instructor.name ?? "");
-  const [birthDate, setBirthDate] = useState(instructor.birth_date ?? "");
-  const [address, setAddress] = useState(instructor.address ?? "");
-  const [homePhone, setHomePhone] = useState(instructor.home_phone ?? "");
-  const [mobilePhone, setMobilePhone] = useState(instructor.mobile_phone ?? "");
-  const [email, setEmail] = useState(instructor.email ?? "");
+  const router = useRouter();
+  const isNew = !instructor;
+
+  const [name, setName] = useState(instructor?.name ?? "");
+  const [birthDate, setBirthDate] = useState(instructor?.birth_date ?? "");
+  const [address, setAddress] = useState(instructor?.address ?? "");
+  const [homePhone, setHomePhone] = useState(instructor?.home_phone ?? "");
+  const [mobilePhone, setMobilePhone] = useState(instructor?.mobile_phone ?? "");
+  const [email, setEmail] = useState(instructor?.email ?? "");
 
   const [careerRows, setCareerRows] = useState<CareerItem[]>(
     career.length
@@ -104,7 +117,7 @@ export function InstructorProxyForm({
     setErr(null);
     setMsg(null);
     start(async () => {
-      const res = await saveInstructorProfile(instructor.id, {
+      const payload = {
         name,
         birth_date: birthDate,
         address,
@@ -114,9 +127,21 @@ export function InstructorProxyForm({
         career: careerRows,
         certs: certRows,
         specialties: specs,
-      });
-      if (res.error) setErr(res.error);
-      else setMsg(res.ok ?? "저장했습니다.");
+      };
+      if (instructor) {
+        const res = await saveInstructorProfile(instructor.id, payload);
+        if (res.error) setErr(res.error);
+        else setMsg(res.ok ?? "저장했습니다.");
+      } else {
+        const res = await createInstructorProfileFull(payload);
+        if (res.error) {
+          setErr(res.error);
+          return;
+        }
+        if (res.instructorId) {
+          router.push(`/staff/instructors/${res.instructorId}/edit`);
+        }
+      }
     });
   }
 
@@ -286,7 +311,7 @@ export function InstructorProxyForm({
         disabled={pending || !name.trim()}
         className="self-start rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
       >
-        {pending ? "저장 중…" : "저장"}
+        {pending ? (isNew ? "생성 중…" : "저장 중…") : isNew ? "생성하고 대리입력 계속" : "저장"}
       </button>
     </div>
   );

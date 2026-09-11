@@ -87,41 +87,20 @@ interface CertItem {
   issuing_org: string;
 }
 
-/** 대리입력 통합 저장 — 기본정보 + 경력/자격증/전문분야 전체 교체 */
-export async function saveInstructorProfile(
+interface ProfileDetailsPayload {
+  career: CareerItem[];
+  certs: CertItem[];
+  specialties: string[];
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+/** 경력/자격증/전문분야 전체 교체 — 신규 생성·기존 수정 양쪽에서 공용 */
+async function replaceInstructorDetails(
+  supabase: SupabaseServerClient,
   instructorId: string,
-  payload: {
-    name: string;
-    birth_date: string;
-    address: string;
-    home_phone: string;
-    mobile_phone: string;
-    email: string;
-    career: CareerItem[];
-    certs: CertItem[];
-    specialties: string[];
-  },
-): Promise<SaveProfileState> {
-  await requireRole("staff");
-  if (!instructorId) return { error: "잘못된 요청입니다." };
-  const name = payload.name.trim();
-  if (!name) return { error: "성명은 필수입니다." };
-
-  const supabase = await createClient();
-
-  const { error: baseErr } = await supabase
-    .from("instructors")
-    .update({
-      name,
-      birth_date: payload.birth_date || null,
-      address: payload.address.trim() || null,
-      home_phone: payload.home_phone.trim() || null,
-      mobile_phone: payload.mobile_phone.trim() || null,
-      email: payload.email.trim() || null,
-    })
-    .eq("id", instructorId);
-  if (baseErr) return { error: baseErr.message };
-
+  payload: ProfileDetailsPayload,
+): Promise<{ error?: string }> {
   // 경력 전체 교체
   await supabase
     .from("instructor_career_history")
@@ -177,9 +156,90 @@ export async function saveInstructorProfile(
     if (error) return { error: error.message };
   }
 
+  return {};
+}
+
+/** 대리입력 통합 저장(기존 강사) — 기본정보 + 경력/자격증/전문분야 전체 교체 */
+export async function saveInstructorProfile(
+  instructorId: string,
+  payload: ProfileDetailsPayload & {
+    name: string;
+    birth_date: string;
+    address: string;
+    home_phone: string;
+    mobile_phone: string;
+    email: string;
+  },
+): Promise<SaveProfileState> {
+  await requireRole("staff");
+  if (!instructorId) return { error: "잘못된 요청입니다." };
+  const name = payload.name.trim();
+  if (!name) return { error: "성명은 필수입니다." };
+
+  const supabase = await createClient();
+
+  const { error: baseErr } = await supabase
+    .from("instructors")
+    .update({
+      name,
+      birth_date: payload.birth_date || null,
+      address: payload.address.trim() || null,
+      home_phone: payload.home_phone.trim() || null,
+      mobile_phone: payload.mobile_phone.trim() || null,
+      email: payload.email.trim() || null,
+    })
+    .eq("id", instructorId);
+  if (baseErr) return { error: baseErr.message };
+
+  const detailsRes = await replaceInstructorDetails(supabase, instructorId, payload);
+  if (detailsRes.error) return { error: detailsRes.error };
+
   revalidatePath(`/staff/instructors/${instructorId}/edit`);
   revalidatePath("/staff/instructors");
   return { ok: "저장했습니다." };
+}
+
+/**
+ * 작업지시서 #008-2 — "파일/사진으로 시작" 경로의 통합 생성.
+ * AI 자동채움으로 기본정보·경력·자격증·전문분야까지 채운 뒤 "저장" 한 번으로
+ * instructors row 와 하위 정보를 함께 만든다(성명만 먼저 입력해 빈 row 를
+ * 만드는 중간 단계 없음).
+ */
+export async function createInstructorProfileFull(
+  payload: ProfileDetailsPayload & {
+    name: string;
+    birth_date: string;
+    address: string;
+    home_phone: string;
+    mobile_phone: string;
+    email: string;
+  },
+): Promise<SaveProfileState & { instructorId?: string }> {
+  await requireRole("staff");
+  const name = payload.name.trim();
+  if (!name) return { error: "성명은 필수입니다." };
+
+  const supabase = await createClient();
+
+  const { data, error: insErr } = await supabase
+    .from("instructors")
+    .insert({
+      name,
+      birth_date: payload.birth_date || null,
+      address: payload.address.trim() || null,
+      home_phone: payload.home_phone.trim() || null,
+      mobile_phone: payload.mobile_phone.trim() || null,
+      email: payload.email.trim() || null,
+    })
+    .select("id")
+    .single();
+  if (insErr || !data) return { error: `생성 실패: ${insErr?.message ?? ""}` };
+
+  const detailsRes = await replaceInstructorDetails(supabase, data.id, payload);
+  if (detailsRes.error) return { error: detailsRes.error };
+
+  revalidatePath("/staff/instructors");
+  return { ok: "생성했습니다.", instructorId: data.id };
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;

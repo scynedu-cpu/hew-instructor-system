@@ -8,7 +8,7 @@ import type {
   Instructor,
   SpecialtyRow,
 } from "@/lib/types";
-import { InstructorProxyForm } from "./instructor-proxy-form";
+import { InstructorProfileForm } from "@/components/instructor-profile-form";
 import { stopProxyEdit } from "../../actions";
 
 export default async function InstructorProxyEditPage({
@@ -88,7 +88,7 @@ export default async function InstructorProxyEditPage({
         </Link>
       </div>
 
-      <InstructorProxyForm
+      <InstructorProfileForm
         instructor={instructor}
         career={career ?? []}
         certs={certs ?? []}

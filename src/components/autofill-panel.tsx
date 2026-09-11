@@ -69,10 +69,13 @@ export function AutofillPanel({
         fileName: file.name,
       });
       const src = data.source === "hwp" ? "한글 문서" : "이미지";
+      // school-request 화면만 오른쪽에 원본 미리보기가 있음(instructor 화면은 없음)
+      const previewHint =
+        kind === "school-request" ? " 오른쪽 원본과 대조해" : "";
       setMsg(
-        `${src}에서 값을 읽어 왼쪽 폼에 채웠습니다${
+        `${src}에서 값을 읽어 폼에 채웠습니다${
           data.simulated ? " (모의 모드 — 키 미설정)" : ""
-        }. 오른쪽 원본과 대조해 확인·수정한 뒤 저장하세요.`,
+        }.${previewHint} 확인·수정한 뒤 저장하세요.`,
       );
     } catch {
       setErr("업로드 중 오류가 발생했습니다.");
