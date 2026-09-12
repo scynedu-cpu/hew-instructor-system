@@ -37,31 +37,20 @@ function needsUpdate(r: InstructorDashboardRow): boolean {
   );
 }
 
-/** 카드 배경은 전부 회색 계열로 통일하고, 명암 단계만 달리해서 3개를 구분한다
- *  (급함 정도는 숫자 색(red/amber/foreground)으로 표시) */
-const SHADE_BG: Record<"1" | "2" | "3", string> = {
-  "1": "bg-zinc-200",
-  "2": "bg-zinc-100",
-  "3": "bg-zinc-50",
-};
-
+/** 카드 배경은 3개 전부 짙은 회색으로 통일(급함 정도는 숫자 색으로 표시) */
 function SummaryCard({
   label,
   count,
   tone,
-  shade,
 }: {
   label: string;
   count: number;
   tone: "red" | "amber" | "zinc";
-  shade: "1" | "2" | "3";
 }) {
   const numberCls =
     tone === "red" ? "text-red-700" : tone === "amber" ? "text-amber-800" : "text-foreground";
   return (
-    <div
-      className={`flex flex-col gap-1 rounded-lg border border-border p-4 ${SHADE_BG[shade]}`}
-    >
+    <div className="flex flex-col gap-1 rounded-lg border border-border bg-zinc-200 p-4">
       <span className="text-sm text-muted">{label}</span>
       <span className={`text-2xl font-bold ${numberCls}`}>{count}명</span>
     </div>
@@ -95,24 +84,9 @@ export function InstructorDashboardClient({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SummaryCard
-          label="서류 만료임박·만료"
-          count={docIssueCount}
-          tone="red"
-          shade="1"
-        />
-        <SummaryCard
-          label="정보 미비"
-          count={infoIncompleteCount}
-          tone="amber"
-          shade="2"
-        />
-        <SummaryCard
-          label="계정 미발급"
-          count={noAccountCount}
-          tone="zinc"
-          shade="3"
-        />
+        <SummaryCard label="서류 만료임박·만료" count={docIssueCount} tone="red" />
+        <SummaryCard label="정보 미비" count={infoIncompleteCount} tone="amber" />
+        <SummaryCard label="계정 미발급" count={noAccountCount} tone="zinc" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
