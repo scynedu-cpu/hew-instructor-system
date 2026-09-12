@@ -23,6 +23,8 @@ import { SessionDetailPanel } from "./session-detail-panel";
 import { ConflictDialog } from "./conflict-dialog";
 
 function statusClasses(s: CalendarSession) {
+  if (s.session_status === "completed")
+    return "border-l-4 border-zinc-400 bg-zinc-100 text-zinc-600";
   if (s.session_status === "confirmed")
     return "border-l-4 border-green-500 bg-green-50 text-green-900";
   return "border-l-4 border-amber-400 bg-amber-50 text-amber-900";
@@ -90,6 +92,7 @@ export function CalendarClient({
     setMsg(null);
     const s = sessions.find((x) => x.id === sessionId);
     if (!s || s.scheduled_date === targetDate || busy) return;
+    if (s.session_status === "completed") return;
 
     setBusy(true);
     let conflicts: TimeConflict[] = [];
@@ -197,7 +200,11 @@ export function CalendarClient({
           <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-400" />
           임시배정
         </span>
-        <span>카드를 다른 날짜 칸으로 드래그하면 일정이 이동합니다.</span>
+        <span>
+          <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-zinc-400" />
+          강의완료
+        </span>
+        <span>카드를 다른 날짜 칸으로 드래그하면 일정이 이동합니다. (강의완료 세션은 변경할 수 없습니다)</span>
       </div>
 
       {msg && (
@@ -254,30 +261,40 @@ export function CalendarClient({
                 {date === today ? "오늘 " : ""}
                 {dayOfMonth(date)}
               </div>
-              {list.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("text/plain", s.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onClick={() => setSelectedId(s.id)}
-                  className={`cursor-grab rounded px-1.5 py-1 text-left active:cursor-grabbing ${statusClasses(
-                    s,
-                  )}`}
-                >
-                  <div className="font-semibold leading-tight">
-                    {s.school_name}
-                  </div>
-                  <div className="leading-tight">{s.program_name}</div>
-                  <div className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px] opacity-80">
-                    {s.time_slot && <span>{s.time_slot}</span>}
-                    <span>{s.instructor_name ?? "강사 미정"}</span>
-                  </div>
-                </button>
-              ))}
+              {list.map((s) => {
+                const completed = s.session_status === "completed";
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    draggable={!completed}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", s.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onClick={() => setSelectedId(s.id)}
+                    className={`rounded px-1.5 py-1 text-left ${
+                      completed
+                        ? "cursor-pointer"
+                        : "cursor-grab active:cursor-grabbing"
+                    } ${statusClasses(s)}`}
+                  >
+                    <div className="flex items-center gap-1 font-semibold leading-tight">
+                      <span>{s.school_name}</span>
+                      {completed && (
+                        <span className="rounded bg-zinc-300 px-1 py-0.5 text-[10px] font-medium text-zinc-700">
+                          강의완료
+                        </span>
+                      )}
+                    </div>
+                    <div className="leading-tight">{s.program_name}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px] opacity-80">
+                      {s.time_slot && <span>{s.time_slot}</span>}
+                      <span>{s.instructor_name ?? "강사 미정"}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           );
         })}

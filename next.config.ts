@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
       ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
       : [],
   },
+  // 강의확인서 등 파일 업로드용 Server Action은 기본 1MB 제한을 넘길 수 있어
+  // completeSession()의 자체 10MB 검증과 맞춰 상향한다. (작업지시서 #012 후속 수정)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
   serverExternalPackages: KORDOC_OPTIONAL_OCR_DEPS,
   outputFileTracingExcludes: {
     "/api/ai/autofill/route": KORDOC_OPTIONAL_OCR_DEPS.map(

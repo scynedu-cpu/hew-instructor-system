@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CalendarSession,
   InstructorWithSpecialties,
@@ -42,6 +42,7 @@ export function SessionDetailPanel({
   const [completeFile, setCompleteFile] = useState<File | null>(null);
   const [completeBusy, setCompleteBusy] = useState(false);
   const [completeErr, setCompleteErr] = useState<string | null>(null);
+  const completeFileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<{
     title: string;
     message: string;
@@ -232,14 +233,27 @@ export function SessionDetailPanel({
                 className="rounded-md border border-border px-2 py-1.5 text-sm text-foreground"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-muted">
+            <div className="flex flex-col gap-1 text-xs text-muted">
               강의확인서 파일
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => completeFileRef.current?.click()}
+                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-zinc-50"
+                >
+                  파일 선택
+                </button>
+                <span className="truncate text-sm text-foreground">
+                  {completeFile?.name ?? "선택된 파일 없음"}
+                </span>
+              </div>
               <input
+                ref={completeFileRef}
                 type="file"
+                hidden
                 onChange={(e) => setCompleteFile(e.target.files?.[0] ?? null)}
-                className="text-sm text-foreground"
               />
-            </label>
+            </div>
             {completeErr && (
               <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
                 {completeErr}
@@ -256,89 +270,101 @@ export function SessionDetailPanel({
           </section>
         )}
 
-        {/* 일정 변경 */}
-        <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">일정 변경</h3>
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded-md border border-border px-2 py-1.5 text-sm"
-            />
-            <input
-              value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
-              placeholder="시간대 (예: 3·4교시)"
-              className="flex-1 rounded-md border border-border px-2 py-1.5 text-sm"
-            />
-          </div>
-          <button
-            type="button"
-            disabled={busy || !scheduleChanged}
-            onClick={doReschedule}
-            className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
-          >
-            일정 변경 저장
-          </button>
-        </section>
+        {/* 강의 완료된 세션은 일정/강사를 더 바꿀 수 없음 — 작업지시서 #012 수정 */}
+        {session.session_status === "completed" ? (
+          <section className="flex flex-col gap-1 rounded-lg border border-border bg-zinc-50 p-3 text-sm text-muted">
+            <p className="font-semibold text-foreground">강의완료</p>
+            <p>
+              강의 완료 처리된 세션은 일정 변경·강사 교체를 할 수 없습니다.
+            </p>
+          </section>
+        ) : (
+          <>
+            {/* 일정 변경 */}
+            <section className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold">일정 변경</h3>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="rounded-md border border-border px-2 py-1.5 text-sm"
+                />
+                <input
+                  value={timeSlot}
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  placeholder="시간대 (예: 3·4교시)"
+                  className="flex-1 rounded-md border border-border px-2 py-1.5 text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={busy || !scheduleChanged}
+                onClick={doReschedule}
+                className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
+              >
+                일정 변경 저장
+              </button>
+            </section>
 
-        {/* 강사 교체 */}
-        <section className="flex flex-col gap-2">
-          <h3 className="text-sm font-semibold">강사 교체</h3>
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPickedInstructor(null);
-            }}
-            placeholder="이름 또는 전문분야로 검색"
-            className="rounded-md border border-border px-2 py-1.5 text-sm"
-          />
-          <ul className="flex max-h-52 flex-col gap-1 overflow-y-auto">
-            {matches.length === 0 && (
-              <li className="px-1 py-2 text-xs text-muted">
-                일치하는 강사가 없습니다.
-              </li>
-            )}
-            {matches.map((i) => (
-              <li key={i.id}>
-                <button
-                  type="button"
-                  onClick={() => setPickedInstructor(i.id)}
-                  className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-left text-sm ${
-                    pickedInstructor === i.id
-                      ? "border-brand bg-blue-50/50"
-                      : "border-border hover:bg-zinc-50"
-                  } ${i.id === session.instructor_id ? "opacity-50" : ""}`}
-                  disabled={i.id === session.instructor_id}
-                >
-                  <span className="font-medium">
-                    {i.name}
-                    {i.id === session.instructor_id && " (현재)"}
-                  </span>
-                  <span className="truncate text-xs text-muted">
-                    {i.specialties.join(", ") || "전문분야 미등록"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="변경 사유 (선택, 이력에 기록)"
-            className="rounded-md border border-border px-2 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            disabled={busy || !pickedInstructor}
-            onClick={doSwap}
-            className="self-start rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-          >
-            강사 교체
-          </button>
-        </section>
+            {/* 강사 교체 */}
+            <section className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold">강사 교체</h3>
+              <input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPickedInstructor(null);
+                }}
+                placeholder="이름 또는 전문분야로 검색"
+                className="rounded-md border border-border px-2 py-1.5 text-sm"
+              />
+              <ul className="flex max-h-52 flex-col gap-1 overflow-y-auto">
+                {matches.length === 0 && (
+                  <li className="px-1 py-2 text-xs text-muted">
+                    일치하는 강사가 없습니다.
+                  </li>
+                )}
+                {matches.map((i) => (
+                  <li key={i.id}>
+                    <button
+                      type="button"
+                      onClick={() => setPickedInstructor(i.id)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-left text-sm ${
+                        pickedInstructor === i.id
+                          ? "border-brand bg-blue-50/50"
+                          : "border-border hover:bg-zinc-50"
+                      } ${i.id === session.instructor_id ? "opacity-50" : ""}`}
+                      disabled={i.id === session.instructor_id}
+                    >
+                      <span className="font-medium">
+                        {i.name}
+                        {i.id === session.instructor_id && " (현재)"}
+                      </span>
+                      <span className="truncate text-xs text-muted">
+                        {i.specialties.join(", ") || "전문분야 미등록"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="변경 사유 (선택, 이력에 기록)"
+                className="rounded-md border border-border px-2 py-1.5 text-sm"
+              />
+              <button
+                type="button"
+                disabled={busy || !pickedInstructor}
+                onClick={doSwap}
+                className="self-start rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                강사 교체
+              </button>
+            </section>
+          </>
+        )}
 
         {/* 이력 */}
         <section className="flex flex-col gap-2">

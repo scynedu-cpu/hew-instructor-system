@@ -56,7 +56,7 @@ export default async function StaffCalendarPage({
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
-        .in("session_status", ["provisional", "confirmed"])
+        .in("session_status", ["provisional", "confirmed", "completed"])
         .returns<Row[]>(),
       supabase
         .from("instructors")
