@@ -54,6 +54,17 @@ export function computeStatus(expiresAt: string | null, today = new Date()): Doc
   return "valid";
 }
 
+/**
+ * 만료일까지(또는 만료일로부터) 며칠인지 — 오늘 기준. 음수면 이미 지남.
+ * computeStatus() 와 같은 UTC 날짜 계산 규칙(타임존 영향 없음).
+ */
+export function daysUntil(expiresAt: string, today = new Date()): number {
+  const [y, m, d] = expiresAt.split("-").map(Number);
+  const exp = Date.UTC(y, m - 1, d);
+  const t = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((exp - t) / 86_400_000);
+}
+
 export const DOC_STATUS_LABEL: Record<DocStatus, string> = {
   valid: "정상",
   expiring_soon: "임박",

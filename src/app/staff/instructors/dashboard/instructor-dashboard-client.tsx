@@ -4,12 +4,24 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DOC_STATUS_LABEL, DOC_STATUS_STYLE, type DocStatus } from "@/lib/documents";
 
+/** 임박/만료 서류 1건 — 작업지시서 #010-1 */
+export interface DocDetail {
+  docType: string;
+  status: "expiring_soon" | "expired";
+  /** expiring_soon: 남은 일수(D-day) / expired: 지난 일수. 항상 양수 */
+  days: number;
+}
+
 export interface InstructorDashboardRow {
   id: string;
   name: string;
   specialties: string[];
   /** 서류 여러 건 중 가장 급한 상태. 서류가 하나도 없으면 null */
   docStatus: DocStatus | null;
+  /** 정형 서류 7종 중 아직 제출 안 한 종류 */
+  missingDocTypes: string[];
+  /** 임박·만료 서류별 상세(D-day/경과일) */
+  docDetails: DocDetail[];
   /** 경력·자격증·전문분야가 전부 0건 */
   infoIncomplete: boolean;
   /** app_accounts 매핑 없음(#003-1 초대 전) */
@@ -134,13 +146,43 @@ export function InstructorDashboardClient({
                   {r.specialties.length > 0 ? r.specialties.join(", ") : "-"}
                 </td>
                 <td className="px-3 py-2">
-                  {r.docStatus ? (
-                    <span className={`badge ${DOC_STATUS_STYLE[r.docStatus]}`}>
-                      {DOC_STATUS_LABEL[r.docStatus]}
-                    </span>
-                  ) : (
-                    <span className="badge bg-zinc-100 text-zinc-500">서류없음</span>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {r.docStatus ? (
+                      <span
+                        className={`badge w-fit ${DOC_STATUS_STYLE[r.docStatus]}`}
+                      >
+                        {DOC_STATUS_LABEL[r.docStatus]}
+                      </span>
+                    ) : (
+                      <span className="badge w-fit bg-zinc-100 text-zinc-500">
+                        서류없음
+                      </span>
+                    )}
+                    {r.docDetails.length > 0 && (
+                      <div className="flex flex-col text-xs">
+                        {r.docDetails.map((d) => (
+                          <span
+                            key={d.docType}
+                            className={
+                              d.status === "expired"
+                                ? "text-red-700"
+                                : "text-amber-800"
+                            }
+                          >
+                            {d.docType}{" "}
+                            {d.status === "expiring_soon"
+                              ? `D-${d.days}`
+                              : `만료 ${d.days}일 경과`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {r.missingDocTypes.length > 0 && (
+                      <span className="text-xs text-muted">
+                        {r.missingDocTypes.join(" · ")} 누락
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   {r.infoIncomplete ? (

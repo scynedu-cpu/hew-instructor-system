@@ -1,9 +1,10 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { computeStatus, type DocStatus } from "@/lib/documents";
+import { computeStatus, daysUntil, DOC_TYPES, type DocStatus } from "@/lib/documents";
 import {
   InstructorDashboardClient,
   type InstructorDashboardRow,
+  type DocDetail,
 } from "./instructor-dashboard-client";
 
 /** 서류 상태 우선순위 — 강사에게 서류가 여러 건이면 가장 급한 것으로 표시 */
@@ -13,7 +14,7 @@ const DOC_STATUS_RANK: Record<DocStatus, number> = {
   expired: 2,
 };
 
-/** 작업지시서 #010 — 강사풀 현황 대시보드 (staff 전용) */
+/** 작업지시서 #010/#010-1 — 강사풀 현황 대시보드 (staff 전용) */
 export default async function InstructorDashboardPage() {
   await requireRole("staff");
   const supabase = await createClient();
@@ -30,7 +31,7 @@ export default async function InstructorDashboardPage() {
     supabase.from("instructor_specialties").select("instructor_id,specialty"),
     supabase.from("instructor_career_history").select("instructor_id"),
     supabase.from("instructor_certifications").select("instructor_id"),
-    supabase.from("instructor_documents").select("instructor_id,expires_at"),
+    supabase.from("instructor_documents").select("instructor_id,doc_type,expires_at"),
     supabase
       .from("app_accounts")
       .select("instructor_id")
@@ -53,16 +54,16 @@ export default async function InstructorDashboardPage() {
     certCount.set(c.instructor_id, (certCount.get(c.instructor_id) ?? 0) + 1);
   }
 
-  // 서류 상태 — 발급 시점에 저장된 status 컬럼은 시간이 지나면 stale 해질 수
-  // 있어(#006 에서 확인된 사항) expires_at 으로 매번 다시 계산한다. 강사에게
-  // 서류가 여러 건이면 가장 급한(만료 > 임박 > 정상) 상태로 표시.
-  const docStatusByInstructor = new Map<string, DocStatus>();
+  // 서류 — 발급 시점에 저장된 status 컬럼은 시간이 지나면 stale 해질 수 있어
+  // (#006 에서 확인된 사항) expires_at 으로 매번 다시 계산한다.
+  const docsByInstructor = new Map<
+    string,
+    { doc_type: string; expires_at: string | null }[]
+  >();
   for (const d of docs ?? []) {
-    const st = computeStatus(d.expires_at);
-    const prev = docStatusByInstructor.get(d.instructor_id);
-    if (!prev || DOC_STATUS_RANK[st] > DOC_STATUS_RANK[prev]) {
-      docStatusByInstructor.set(d.instructor_id, st);
-    }
+    const arr = docsByInstructor.get(d.instructor_id) ?? [];
+    arr.push({ doc_type: d.doc_type, expires_at: d.expires_at });
+    docsByInstructor.set(d.instructor_id, arr);
   }
 
   const accountSet = new Set((accounts ?? []).map((a) => a.instructor_id));
@@ -73,11 +74,35 @@ export default async function InstructorDashboardPage() {
       (careerCount.get(i.id) ?? 0) === 0 &&
       (certCount.get(i.id) ?? 0) === 0 &&
       specs.length === 0;
+
+    const instDocs = docsByInstructor.get(i.id) ?? [];
+    const submittedTypes = new Set(instDocs.map((d) => d.doc_type));
+    const missingDocTypes = DOC_TYPES.filter((t) => !submittedTypes.has(t));
+
+    let docStatus: DocStatus | null = null;
+    const docDetails: DocDetail[] = [];
+    for (const d of instDocs) {
+      const st = computeStatus(d.expires_at);
+      if (!docStatus || DOC_STATUS_RANK[st] > DOC_STATUS_RANK[docStatus]) {
+        docStatus = st;
+      }
+      if ((st === "expiring_soon" || st === "expired") && d.expires_at) {
+        const remaining = daysUntil(d.expires_at); // 양수=D-day, 음수=경과일
+        docDetails.push({
+          docType: d.doc_type,
+          status: st,
+          days: Math.abs(remaining),
+        });
+      }
+    }
+
     return {
       id: i.id,
       name: i.name,
       specialties: specs,
-      docStatus: docStatusByInstructor.get(i.id) ?? null,
+      docStatus,
+      missingDocTypes,
+      docDetails,
       infoIncomplete,
       noAccount: !accountSet.has(i.id),
     };
