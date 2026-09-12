@@ -132,7 +132,7 @@ export default async function StaffRequestsPage({
                   <td className="px-3 py-2 text-right">
                     <Link
                       href={`/staff/requests/${r.id}`}
-                      className="font-medium text-brand hover:underline"
+                      className="font-medium text-link hover:underline"
                     >
                       상세
                     </Link>

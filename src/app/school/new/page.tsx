@@ -18,7 +18,7 @@ export default async function NewRequestPage() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
       <div>
-        <Link href="/school" className="text-sm text-muted hover:underline">
+        <Link href="/school" className="text-sm text-link hover:underline">
           ← 신청 목록
         </Link>
         <h1 className="mt-1 text-xl font-bold">신규 교육 프로그램 신청</h1>

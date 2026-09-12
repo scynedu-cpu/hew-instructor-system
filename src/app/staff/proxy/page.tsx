@@ -91,7 +91,7 @@ export default async function StaffProxyHubPage() {
                         <input type="hidden" name="id" value={i.id} />
                         <button
                           type="submit"
-                          className="font-medium text-brand hover:underline"
+                          className="cursor-pointer font-medium text-link hover:underline"
                         >
                           대리입력
                         </button>

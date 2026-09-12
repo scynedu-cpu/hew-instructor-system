@@ -106,7 +106,7 @@ export default async function FinalConfirmListPage({
                           />
                           <button
                             type="submit"
-                            className="font-medium text-brand hover:underline"
+                            className="cursor-pointer font-medium text-link hover:underline"
                           >
                             최종확정 진행
                           </button>

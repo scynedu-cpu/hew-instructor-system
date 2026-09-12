@@ -60,7 +60,7 @@ export default async function PaymentDetailPage({
       <div>
         <Link
           href="/staff/payments"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 강사료 정산
         </Link>

@@ -11,7 +11,7 @@ export default async function NewInstructorProfileUploadPage() {
       <div>
         <Link
           href="/staff/instructors/new-profile"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 시작 방법 선택
         </Link>

@@ -114,7 +114,7 @@ function DocRow({
                 href={current.signedUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-brand hover:underline"
+                className="text-xs text-link hover:underline"
               >
                 파일 보기
               </a>

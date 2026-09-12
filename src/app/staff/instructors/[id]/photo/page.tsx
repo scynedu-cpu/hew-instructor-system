@@ -24,9 +24,9 @@ export default async function InstructorProxyPhotoPage({
       <div>
         <Link
           href={`/staff/instructors/${id}/edit`}
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
-          ← {instructor?.name ?? "강사"} 정보 대리입력
+          ← {instructor?.name ?? "강사"} 정보 수정
         </Link>
         <div className="mt-1 flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold">
@@ -37,7 +37,7 @@ export default async function InstructorProxyPhotoPage({
               type="submit"
               className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-zinc-50"
             >
-              대리입력 종료
+              수정 종료
             </button>
           </form>
         </div>

@@ -83,7 +83,7 @@ export default async function StaffAssignmentsPage({
                     <td className="px-3 py-2 text-right">
                       <Link
                         href={`/staff/assignments/${s.id}`}
-                        className="font-medium text-brand hover:underline"
+                        className="font-medium text-link hover:underline"
                       >
                         배정 진행
                       </Link>

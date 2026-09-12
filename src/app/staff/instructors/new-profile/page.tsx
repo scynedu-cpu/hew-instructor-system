@@ -9,7 +9,7 @@ export default async function NewInstructorProfilePage() {
       <div>
         <Link
           href="/staff/instructors"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 강사 계정
         </Link>

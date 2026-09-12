@@ -61,7 +61,7 @@ export default async function AssignmentDetailPage({
       <div>
         <Link
           href="/staff/assignments"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 강사 배정
         </Link>

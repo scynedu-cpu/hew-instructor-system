@@ -28,7 +28,7 @@ export default async function ProxyRequestPage() {
       <div>
         <Link
           href="/staff/requests"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 교육 신청 관리
         </Link>

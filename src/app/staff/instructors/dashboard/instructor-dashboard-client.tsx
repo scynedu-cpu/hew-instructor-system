@@ -137,7 +137,7 @@ export function InstructorDashboardClient({
                 <td className="px-3 py-2 font-medium">
                   <Link
                     href={`/staff/instructors/${r.id}/edit`}
-                    className="text-brand hover:underline"
+                    className="text-link hover:underline"
                   >
                     {r.name}
                   </Link>

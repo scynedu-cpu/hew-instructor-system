@@ -96,7 +96,7 @@ export default async function PaymentsPage() {
                         )}
                         <Link
                           href={`/staff/payments/${p.id}`}
-                          className="font-medium text-brand hover:underline"
+                          className="font-medium text-link hover:underline"
                         >
                           상세
                         </Link>

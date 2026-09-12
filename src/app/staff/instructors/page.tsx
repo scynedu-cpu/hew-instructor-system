@@ -110,7 +110,7 @@ export default async function StaffInstructorsPage() {
                     {r.accountState === "계정 없음" && (
                       <Link
                         href={`/staff/instructors/${r.id}/invite`}
-                        className="font-medium text-brand hover:underline"
+                        className="font-medium text-link hover:underline"
                       >
                         계정 초대
                       </Link>
@@ -119,7 +119,7 @@ export default async function StaffInstructorsPage() {
                       <input type="hidden" name="id" value={r.id} />
                       <button
                         type="submit"
-                        className="cursor-pointer font-medium text-brand hover:underline"
+                        className="cursor-pointer font-medium text-link hover:underline"
                       >
                         계정 업데이트
                       </button>

@@ -9,6 +9,9 @@
   --brand: #1e2a44;
   --brand-hover: #141d30;
   --brand-fg: #e4e4e7;
+  /* 클릭하면 다른 화면으로 넘어가는 텍스트 링크 전용 색(버튼의 --brand 와는
+     별개) — Primary Blue */
+  --link: #2563eb;
 }
 
 @theme inline {
@@ -20,6 +23,7 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-fg: var(--brand-fg);
+  --color-link: var(--link);
   --font-sans: var(--font-sans-kr), system-ui, sans-serif;
 }
 

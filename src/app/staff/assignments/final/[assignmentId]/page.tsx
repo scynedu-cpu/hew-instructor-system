@@ -58,7 +58,7 @@ export default async function FinalConfirmDetailPage({
       <div>
         <Link
           href="/staff/assignments/final"
-          className="text-sm text-muted hover:underline"
+          className="text-sm text-link hover:underline"
         >
           ← 최종확정 목록
         </Link>
