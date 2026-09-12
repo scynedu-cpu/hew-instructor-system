@@ -12,14 +12,19 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
         { href: "/staff/requests", label: "교육 신청 관리" },
         { href: "/staff/assignments", label: "강사 배정" },
         { href: "/staff/calendar", label: "캘린더" },
-        { href: "/staff/instructors/dashboard", label: "강사 현황" },
+        {
+          label: "강사관리",
+          children: [
+            { href: "/staff/instructors", label: "강사 계정" },
+            { href: "/staff/instructors/dashboard", label: "강사 현황" },
+            { href: "/staff/payments", label: "강사료 정산" },
+          ],
+        },
         {
           label: "관리자",
           children: [
             { href: "/staff/programs", label: "프로그램 관리" },
-            { href: "/staff/instructors", label: "강사 계정" },
             { href: "/staff/proxy", label: "대리입력" },
-            { href: "/staff/payments", label: "강사료 정산" },
           ],
         },
         // 학교·강사 미리보기 — 당분간 미사용으로 메뉴 숨김(기능은 /staff/preview
