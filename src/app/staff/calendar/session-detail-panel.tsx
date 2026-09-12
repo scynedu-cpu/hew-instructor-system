@@ -200,7 +200,7 @@ export function SessionDetailPanel({
             type="button"
             disabled={busy || !scheduleChanged}
             onClick={doReschedule}
-            className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
+            className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
           >
             일정 변경 저장
           </button>

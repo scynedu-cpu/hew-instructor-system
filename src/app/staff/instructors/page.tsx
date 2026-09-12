@@ -57,7 +57,7 @@ export default async function StaffInstructorsPage() {
           </Link>
           <Link
             href="/staff/instructors/new"
-            className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+            className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
           >
             신규 강사 초대
           </Link>

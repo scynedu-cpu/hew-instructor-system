@@ -67,7 +67,7 @@ export function InviteForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-60"
         >
           {pending ? "초대 발송 중…" : "초대 메일 발송"}
         </button>

@@ -6,8 +6,9 @@
   --foreground: #18181b;
   --muted: #71717a;
   --border: #e4e4e7;
-  --brand: #1d4ed8;
-  --brand-fg: #ffffff;
+  --brand: #1e2a44;
+  --brand-hover: #141d30;
+  --brand-fg: #e4e4e7;
 }
 
 @theme inline {
@@ -17,6 +18,8 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-fg: var(--brand-fg);
   --font-sans: var(--font-sans-kr), system-ui, sans-serif;
 }
 

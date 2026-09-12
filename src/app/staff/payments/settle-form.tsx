@@ -145,7 +145,7 @@ export function SettleForm({ hasRate }: { hasRate: boolean }) {
         <button
           type="submit"
           disabled={pending || !hasRate || !start || !end}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
         >
           {pending ? "집계 중…" : "이 기간 정산 집계"}
         </button>

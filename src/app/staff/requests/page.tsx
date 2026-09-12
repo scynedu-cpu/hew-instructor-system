@@ -39,7 +39,7 @@ export default async function StaffRequestsPage({
         <h1 className="text-xl font-bold">교육 신청 관리</h1>
         <Link
           href="/staff/requests/new"
-          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
         >
           + 대리입력
         </Link>

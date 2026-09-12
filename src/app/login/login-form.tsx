@@ -41,7 +41,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-1 rounded-md bg-brand px-3 py-2.5 text-sm font-semibold text-brand-fg transition-colors hover:bg-blue-800 disabled:opacity-60"
+        className="mt-1 rounded-md bg-brand px-3 py-2.5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover disabled:opacity-60"
       >
         {pending ? "로그인 중…" : "로그인"}
       </button>

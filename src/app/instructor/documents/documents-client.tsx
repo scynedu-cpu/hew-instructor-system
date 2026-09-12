@@ -178,7 +178,7 @@ function DocRow({
             type="button"
             disabled={pending || (hasExpiry(docType) && !issuedAt)}
             onClick={submit}
-            className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
           >
             {pending ? "업로드 중…" : "저장"}
           </button>

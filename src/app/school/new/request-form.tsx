@@ -56,7 +56,7 @@ export function RequestForm({ programs }: { programs: Program[] }) {
         <button
           type="submit"
           disabled={!canSubmit || pending}
-          className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "제출 중…" : "신청서 제출"}
         </button>

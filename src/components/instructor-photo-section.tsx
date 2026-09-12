@@ -65,7 +65,7 @@ export function InstructorPhotoSection({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={pending}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-60"
         >
           {pending ? "업로드 중…" : "사진 변경"}
         </button>

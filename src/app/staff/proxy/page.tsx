@@ -36,7 +36,7 @@ export default async function StaffProxyHubPage() {
           </p>
           <Link
             href="/staff/requests/new"
-            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
           >
             학교 신청 입력하기
           </Link>
@@ -51,7 +51,7 @@ export default async function StaffProxyHubPage() {
           </p>
           <Link
             href="/staff/instructors/new-profile"
-            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
           >
             새 강사 입력하기
           </Link>

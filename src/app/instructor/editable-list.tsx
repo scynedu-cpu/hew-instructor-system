@@ -180,7 +180,7 @@ export function EditableList({
               () => setAdding(emptyValues(fields)),
             )
           }
-          className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-60"
+          className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-60"
         >
           추가
         </button>

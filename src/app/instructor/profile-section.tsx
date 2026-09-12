@@ -200,7 +200,7 @@ export function ProfileSection({
             type="button"
             onClick={submit}
             disabled={!canSave || pending}
-            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "저장 중…" : "프로필 저장"}
           </button>

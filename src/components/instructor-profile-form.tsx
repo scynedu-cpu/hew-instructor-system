@@ -300,7 +300,7 @@ export function InstructorProfileForm({
               if (v && !specs.includes(v)) setSpecs((p) => [...p, v]);
               setSpecInput("");
             }}
-            className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-blue-800"
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
           >
             추가
           </button>
@@ -320,7 +320,7 @@ export function InstructorProfileForm({
         type="button"
         onClick={save}
         disabled={pending || !name.trim()}
-        className="self-start rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
+        className="self-start rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
       >
         {pending ? (isNew ? "생성 중…" : "저장 중…") : isNew ? "생성하고 대리입력 계속" : "저장"}
       </button>

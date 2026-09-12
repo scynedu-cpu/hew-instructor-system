@@ -187,7 +187,7 @@ export function ProxyRequestForm({
             <button
               type="submit"
               disabled={!canSubmit || pending}
-              className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "저장 중…" : "신청서 저장"}
             </button>

@@ -118,7 +118,7 @@ export default function SetPasswordPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-md bg-brand px-3 py-2.5 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-60"
+              className="rounded-md bg-brand px-3 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-60"
             >
               {submitting ? "설정 중…" : "비밀번호 설정하고 시작하기"}
             </button>

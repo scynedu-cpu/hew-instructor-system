@@ -90,7 +90,7 @@ export function RateManager({
           <button
             type="submit"
             disabled={pending}
-            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-blue-800 disabled:opacity-50"
+            className="self-start rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
           >
             {pending ? "등록 중…" : "새 단가 등록"}
           </button>
