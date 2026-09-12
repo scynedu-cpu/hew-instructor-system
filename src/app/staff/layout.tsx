@@ -12,7 +12,13 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
         { href: "/staff/requests", label: "교육 신청 관리" },
         { href: "/staff/assignments", label: "강사 배정" },
         { href: "/staff/calendar", label: "캘린더" },
-        { href: "/staff/survey-results", label: "설문 결과" },
+        {
+          label: "설문관리",
+          children: [
+            { href: "/staff/survey-results", label: "설문 결과" },
+            { href: "/staff/survey-questions", label: "설문 문항 관리" },
+          ],
+        },
         {
           label: "강사관리",
           children: [
@@ -25,7 +31,6 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
           label: "관리자",
           children: [
             { href: "/staff/programs", label: "프로그램 관리" },
-            { href: "/staff/survey-questions", label: "설문 문항 관리" },
             { href: "/staff/proxy", label: "대리입력" },
           ],
         },
