@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LogoutButton } from "./logout-button";
@@ -23,8 +24,16 @@ export function AppShell({
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm font-bold">
-              HEW 강사·스케줄 관리
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/hew-logo.png"
+                alt="HEW"
+                width={320}
+                height={57}
+                priority
+                className="h-7 w-auto"
+              />
+              <span className="text-sm font-bold text-muted">강사·스케줄 관리</span>
             </Link>
             <span className="badge bg-zinc-100 text-zinc-600">{roleLabel}</span>
           </div>
