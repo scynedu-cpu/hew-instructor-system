@@ -336,3 +336,40 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   approved: "승인",
   rejected: "반려",
 };
+
+// ---- 작업지시서 #013: QR 기반 익명 교육만족도 설문 ----
+
+export type QuestionType = "rating_5" | "single_choice" | "short_text" | "long_text";
+
+export interface SurveyQuestion {
+  id: string;
+  question_type: QuestionType;
+  question_text: string;
+  options: string[] | null; // single_choice 전용
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface SurveyLink {
+  id: string;
+  session_id: string;
+  token: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** get_survey_context() RPC 결과 — 공개 설문 페이지에서 토큰 유효성 확인 + 안내 문구용 */
+export interface SurveyContext {
+  session_id: string;
+  school_name: string;
+  program_name: string;
+  scheduled_date: string | null;
+}
+
+export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
+  rating_5: "5점 척도",
+  single_choice: "단일선택",
+  short_text: "단답형",
+  long_text: "서술형",
+};

@@ -195,6 +195,59 @@ export async function completeSession(formData: FormData): Promise<CalActionResu
   return { ok: "강의 완료 처리했습니다." };
 }
 
+/**
+ * 세션별 설문 QR — 작업지시서 #013.
+ * survey_links 는 session_id 에 UNIQUE 라 없으면 생성, 있으면 그대로 재사용.
+ * 반환하는 url 은 NEXT_PUBLIC_SITE_URL 이 설정돼 있으면 절대경로, 아니면
+ * 상대경로(/survey/{token})만 주고 클라이언트에서 현재 origin 을 붙인다.
+ */
+export interface SurveyLinkResult {
+  token?: string;
+  url?: string;
+  error?: string;
+}
+
+export async function getOrCreateSurveyLink(
+  sessionId: string,
+): Promise<SurveyLinkResult> {
+  const { account } = await requireRole("staff");
+  const supabase = await createClient();
+
+  const { data: existing, error: selErr } = await supabase
+    .from("survey_links")
+    .select("token")
+    .eq("session_id", sessionId)
+    .maybeSingle<{ token: string }>();
+  if (selErr) return { error: selErr.message };
+
+  let token = existing?.token;
+  if (!token) {
+    token = crypto.randomUUID();
+    const { error: insErr } = await supabase.from("survey_links").insert({
+      session_id: sessionId,
+      token,
+      created_by: account.display_name ?? "담당자",
+    });
+    if (insErr) {
+      // session_id UNIQUE 라 동시 클릭 등으로 이미 생성된 경우 — 기존 것 재조회
+      if (insErr.code === "23505") {
+        const { data: retry } = await supabase
+          .from("survey_links")
+          .select("token")
+          .eq("session_id", sessionId)
+          .maybeSingle<{ token: string }>();
+        if (retry?.token) token = retry.token;
+        else return { error: insErr.message };
+      } else {
+        return { error: insErr.message };
+      }
+    }
+  }
+
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+  return { token, url: site ? `${site}/survey/${token}` : `/survey/${token}` };
+}
+
 export interface SessionHistory {
   schedule: ScheduleHistoryRow[];
   assignment: AssignmentHistoryRow[];

@@ -17,6 +17,7 @@ import {
   type SessionHistory,
 } from "./actions";
 import { ConflictDialog } from "./conflict-dialog";
+import { SurveyQrDialog } from "./survey-qr-dialog";
 
 export function SessionDetailPanel({
   session,
@@ -43,6 +44,7 @@ export function SessionDetailPanel({
   const [completeBusy, setCompleteBusy] = useState(false);
   const [completeErr, setCompleteErr] = useState<string | null>(null);
   const completeFileRef = useRef<HTMLInputElement>(null);
+  const [showSurveyQr, setShowSurveyQr] = useState(false);
   const [pending, setPending] = useState<{
     title: string;
     message: string;
@@ -207,6 +209,15 @@ export function SessionDetailPanel({
             {err}
           </p>
         )}
+
+        {/* 교육만족도 설문 QR — 작업지시서 #013 */}
+        <button
+          type="button"
+          onClick={() => setShowSurveyQr(true)}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-zinc-50"
+        >
+          설문 QR 보기
+        </button>
 
         {/* 강의 완료 처리 — 작업지시서 #012, confirmed 세션만 노출 */}
         {session.session_status === "confirmed" && (
@@ -401,6 +412,13 @@ export function SessionDetailPanel({
           busy={busy}
           onCancel={() => setPending(null)}
           onConfirm={pending.run}
+        />
+      )}
+
+      {showSurveyQr && (
+        <SurveyQrDialog
+          sessionId={session.id}
+          onClose={() => setShowSurveyQr(false)}
         />
       )}
     </div>

@@ -36,10 +36,12 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   // /api/* 는 각 라우트가 자체 인증(예: CRON_SECRET)을 하므로 세션 리다이렉트 대상에서 제외
+  // /survey/* 는 QR로 접속하는 완전 익명 공개 설문 응답 페이지 (작업지시서 #013)
   const isPublic =
     pathname === "/login" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api");
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/survey");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
