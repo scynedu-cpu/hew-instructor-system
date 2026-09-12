@@ -98,15 +98,17 @@ export async function getSchoolContext(): Promise<SchoolContext> {
   }
 
   if (viewer.account.role === "staff") {
+    // 학교화면 미리보기는 당분간 비활성화 — 쿠키가 있어도 더 이상 설정될 길이
+    // 없으므로 사실상 항상 이 경로. staff 홈으로 되돌린다.
     const jar = await cookies();
     const schoolId = jar.get(PREVIEW_SCHOOL_COOKIE)?.value;
-    if (!schoolId) redirect("/staff/preview?target=school");
+    if (!schoolId) redirect(roleHome("staff"));
     const { data } = await supabase
       .from("schools")
       .select("name")
       .eq("id", schoolId)
       .maybeSingle<{ name: string }>();
-    if (!data) redirect("/staff/preview?target=school");
+    if (!data) redirect(roleHome("staff"));
     return { viewer, schoolId: schoolId!, schoolName: data.name, readOnly: true };
   }
 
@@ -153,14 +155,16 @@ export async function getInstructorContext(): Promise<InstructorContext> {
         };
       }
     }
+    // 강사화면 미리보기도 당분간 비활성화 — 쿠키가 있어도 더 이상 설정될
+    // 길이 없으므로 사실상 항상 이 경로. staff 홈으로 되돌린다.
     const instructorId = jar.get(PREVIEW_INSTRUCTOR_COOKIE)?.value;
-    if (!instructorId) redirect("/staff/preview?target=instructor");
+    if (!instructorId) redirect(roleHome("staff"));
     const { data } = await supabase
       .from("instructors")
       .select("name")
       .eq("id", instructorId)
       .maybeSingle<{ name: string }>();
-    if (!data) redirect("/staff/preview?target=instructor");
+    if (!data) redirect(roleHome("staff"));
     return {
       viewer,
       instructorId: instructorId!,

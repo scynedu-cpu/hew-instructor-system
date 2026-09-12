@@ -1,34 +1,17 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import {
-  PREVIEW_SCHOOL_COOKIE,
-  PREVIEW_INSTRUCTOR_COOKIE,
-} from "@/lib/auth";
 
-const COOKIE_OPTS = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/",
-  maxAge: 60 * 60 * 8,
-};
-
-export async function pickSchool(formData: FormData) {
+// 학교·강사 화면 미리보기 — 당분간 미사용으로 비활성화(page.tsx 참고).
+// 쿠키를 세팅하던 기존 로직은 제거하고, 혹시 남아있는 호출부가 있어도
+// 아무 화면도 열지 못하도록 미리보기 화면으로만 되돌린다.
+export async function pickSchool() {
   await requireRole("staff");
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-  const jar = await cookies();
-  jar.set(PREVIEW_SCHOOL_COOKIE, id, COOKIE_OPTS);
-  redirect("/school");
+  redirect("/staff/preview");
 }
 
-export async function pickInstructor(formData: FormData) {
+export async function pickInstructor() {
   await requireRole("staff");
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-  const jar = await cookies();
-  jar.set(PREVIEW_INSTRUCTOR_COOKIE, id, COOKIE_OPTS);
-  redirect("/instructor");
+  redirect("/staff/preview");
 }
