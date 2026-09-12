@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CareerRow, CertRow, Instructor } from "@/lib/types";
 import { AutofillPanel } from "@/components/autofill-panel";
+import { SpecialtyRecommendations } from "@/components/specialty-recommendations";
 import {
   saveInstructorProfile,
   createInstructorProfileFull,
@@ -267,6 +268,16 @@ export function InstructorProfileForm({
             </span>
           ))}
         </div>
+
+        <SpecialtyRecommendations
+          career={careerRows}
+          certs={certRows}
+          existing={specs}
+          onAdd={(s) => {
+            if (!specs.includes(s)) setSpecs((p) => [...p, s]);
+          }}
+        />
+
         <div className="flex gap-2">
           <input
             value={specInput}

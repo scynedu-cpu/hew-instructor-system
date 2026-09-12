@@ -58,7 +58,12 @@ export default async function InstructorProfilePage() {
       <ProfileSection instructor={instructor} readOnly={readOnly} />
       <CareerSection items={career ?? []} readOnly={readOnly} />
       <CertSection items={certs ?? []} readOnly={readOnly} />
-      <SpecialtySection items={specialties ?? []} readOnly={readOnly} />
+      <SpecialtySection
+        items={specialties ?? []}
+        career={career ?? []}
+        certs={certs ?? []}
+        readOnly={readOnly}
+      />
     </div>
   );
 }

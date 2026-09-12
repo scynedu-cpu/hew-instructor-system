@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { SpecialtyRow } from "@/lib/types";
+import type { CareerRow, CertRow, SpecialtyRow } from "@/lib/types";
 import { addSpecialty, removeSpecialty } from "./actions";
+import { SpecialtyRecommendations } from "@/components/specialty-recommendations";
 
 const SUGGESTIONS = [
   "AI교육",
@@ -17,9 +18,13 @@ const SUGGESTIONS = [
 
 export function SpecialtySection({
   items,
+  career = [],
+  certs = [],
   readOnly = false,
 }: {
   items: SpecialtyRow[];
+  career?: CareerRow[];
+  certs?: CertRow[];
   readOnly?: boolean;
 }) {
   const [input, setInput] = useState("");
@@ -75,6 +80,17 @@ export function SpecialtySection({
           </span>
         ))}
       </div>
+
+      {!readOnly && (
+        <div className="mt-3">
+          <SpecialtyRecommendations
+            career={career}
+            certs={certs}
+            existing={items.map((i) => i.specialty)}
+            onAdd={add}
+          />
+        </div>
+      )}
 
       {!readOnly && (
       <div className="mt-3 flex gap-2">
