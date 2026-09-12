@@ -119,9 +119,9 @@ export default async function StaffInstructorsPage() {
                       <input type="hidden" name="id" value={r.id} />
                       <button
                         type="submit"
-                        className="font-medium text-brand hover:underline"
+                        className="cursor-pointer font-medium text-brand hover:underline"
                       >
-                        대리입력
+                        계정 업데이트
                       </button>
                     </form>
                   </div>
