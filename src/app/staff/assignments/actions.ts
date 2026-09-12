@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
+import { generateAssignmentCandidates } from "@/lib/matching";
 
 export interface ActionState {
   error?: string;
@@ -32,6 +33,13 @@ export async function confirmSchedule(
   });
 
   if (error) return { error: error.message };
+
+  // #004-1: 전문분야 유사도(Claude 배치 호출) 반영 후보 계산 — 일정 확정과
+  // 별도 단계로 분리(SQL 함수는 더 이상 후보를 직접 계산하지 않음)
+  const matchResult = await generateAssignmentCandidates(supabase, sessionId);
+  if (matchResult.error) {
+    return { error: `예정일은 확정됐지만 후보 계산에 실패했습니다: ${matchResult.error}` };
+  }
 
   revalidatePath(`/staff/assignments/${sessionId}`);
   revalidatePath("/staff/assignments");
@@ -82,9 +90,8 @@ export async function startFinalConfirm(formData: FormData): Promise<void> {
     .maybeSingle<{ session_id: string; assignment_type: string }>();
 
   if (assignment?.assignment_type === "provisional") {
-    await supabase.rpc("generate_assignment_candidates", {
-      p_session_id: assignment.session_id,
-    });
+    // #004-1: 최종확정 재계산도 동일한 유사도 로직 재사용
+    await generateAssignmentCandidates(supabase, assignment.session_id);
   }
 
   revalidatePath(`/staff/assignments/final/${assignmentId}`);
