@@ -114,6 +114,87 @@ export async function swapInstructor(
   return { ok: "강사를 교체했습니다." };
 }
 
+const LECTURE_CONFIRMATIONS_BUCKET = "lecture-confirmations";
+
+function safeFileName(name: string): string {
+  // Supabase Storage 키는 ASCII 안전문자만 — 한글 등은 '_' 로 치환
+  const cleaned = name.replace(/[^A-Za-z0-9._-]/g, "_").replace(/_+/g, "_");
+  return cleaned.slice(-60) || "file";
+}
+
+/**
+ * 강의 완료 처리 — 작업지시서 #012.
+ * confirmed 세션에 실제 강의일/시간 + 강의확인서를 남기고
+ * lecture_confirmations 1건 생성 + class_sessions.session_status='completed'.
+ * 이 데이터가 있어야 #007 정산 집계가 대상으로 잡는다.
+ */
+export async function completeSession(formData: FormData): Promise<CalActionResult> {
+  await requireRole("staff");
+
+  const sessionId = String(formData.get("session_id") ?? "");
+  const actualDate = String(formData.get("actual_date") ?? "").trim();
+  const actualHoursRaw = String(formData.get("actual_hours") ?? "").trim();
+  const file = formData.get("file");
+
+  if (!sessionId) return { error: "잘못된 요청입니다." };
+  if (!actualDate) return { error: "실제 강의일을 입력하세요." };
+  const actualHours = Number(actualHoursRaw);
+  if (!actualHoursRaw || !Number.isFinite(actualHours) || actualHours <= 0) {
+    return { error: "실제 강의 시간을 입력하세요." };
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "강의확인서 파일을 첨부하세요." };
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { error: "파일은 10MB 이하만 가능합니다." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: session } = await supabase
+    .from("class_sessions")
+    .select("session_status")
+    .eq("id", sessionId)
+    .maybeSingle<{ session_status: string }>();
+  if (!session) return { error: "세션을 찾을 수 없습니다." };
+  if (session.session_status !== "confirmed") {
+    return { error: "최종확정(confirmed) 상태의 세션만 완료 처리할 수 있습니다." };
+  }
+
+  const { data: assignment } = await supabase
+    .from("assignments")
+    .select("id")
+    .eq("session_id", sessionId)
+    .maybeSingle<{ id: string }>();
+  if (!assignment) return { error: "배정 정보를 찾을 수 없습니다." };
+
+  const path = `${sessionId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+  const { error: upErr } = await supabase.storage
+    .from(LECTURE_CONFIRMATIONS_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: `업로드 실패: ${upErr.message}` };
+
+  const { error: insErr } = await supabase.from("lecture_confirmations").insert({
+    assignment_id: assignment.id,
+    actual_date: actualDate,
+    actual_hours: actualHours,
+    file_url: path,
+  });
+  if (insErr) {
+    await supabase.storage.from(LECTURE_CONFIRMATIONS_BUCKET).remove([path]);
+    return { error: insErr.message };
+  }
+
+  const { error: updErr } = await supabase
+    .from("class_sessions")
+    .update({ session_status: "completed" })
+    .eq("id", sessionId);
+  if (updErr) return { error: updErr.message };
+
+  revalidatePath("/staff/calendar");
+  return { ok: "강의 완료 처리했습니다." };
+}
+
 export interface SessionHistory {
   schedule: ScheduleHistoryRow[];
   assignment: AssignmentHistoryRow[];

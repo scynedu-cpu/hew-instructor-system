@@ -10,6 +10,7 @@ import { SESSION_STATUS_LABEL } from "@/lib/types";
 import {
   checkRescheduleConflict,
   checkSwapConflict,
+  completeSession,
   getSessionHistory,
   reschedule,
   swapInstructor,
@@ -36,6 +37,11 @@ export function SessionDetailPanel({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [history, setHistory] = useState<SessionHistory | null>(null);
+  const [actualDate, setActualDate] = useState(session.scheduled_date);
+  const [actualHours, setActualHours] = useState("");
+  const [completeFile, setCompleteFile] = useState<File | null>(null);
+  const [completeBusy, setCompleteBusy] = useState(false);
+  const [completeErr, setCompleteErr] = useState<string | null>(null);
   const [pending, setPending] = useState<{
     title: string;
     message: string;
@@ -140,6 +146,28 @@ export function SessionDetailPanel({
     await runSwap();
   }
 
+  async function doComplete() {
+    setCompleteErr(null);
+    if (!actualDate) return setCompleteErr("실제 강의일을 입력하세요.");
+    if (!actualHours || Number(actualHours) <= 0) {
+      return setCompleteErr("실제 강의 시간을 입력하세요.");
+    }
+    if (!completeFile) return setCompleteErr("강의확인서 파일을 첨부하세요.");
+    const fd = new FormData();
+    fd.set("session_id", session.id);
+    fd.set("actual_date", actualDate);
+    fd.set("actual_hours", actualHours);
+    fd.set("file", completeFile);
+    setCompleteBusy(true);
+    try {
+      const res = await completeSession(fd);
+      if (res.error) setCompleteErr(res.error);
+      else onChanged();
+    } finally {
+      setCompleteBusy(false);
+    }
+  }
+
   const timeline = buildTimeline(history, instructorName);
 
   return (
@@ -177,6 +205,55 @@ export function SessionDetailPanel({
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
             {err}
           </p>
+        )}
+
+        {/* 강의 완료 처리 — 작업지시서 #012, confirmed 세션만 노출 */}
+        {session.session_status === "confirmed" && (
+          <section className="flex flex-col gap-2 rounded-lg border border-brand/30 bg-blue-50/30 p-3">
+            <h3 className="text-sm font-semibold">강의 완료 처리</h3>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              실제 강의일
+              <input
+                type="date"
+                value={actualDate ?? ""}
+                onChange={(e) => setActualDate(e.target.value)}
+                className="rounded-md border border-border px-2 py-1.5 text-sm text-foreground"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              실제 강의 시간(시간)
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={actualHours}
+                onChange={(e) => setActualHours(e.target.value)}
+                placeholder="예: 1.5"
+                className="rounded-md border border-border px-2 py-1.5 text-sm text-foreground"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              강의확인서 파일
+              <input
+                type="file"
+                onChange={(e) => setCompleteFile(e.target.files?.[0] ?? null)}
+                className="text-sm text-foreground"
+              />
+            </label>
+            {completeErr && (
+              <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+                {completeErr}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={completeBusy}
+              onClick={doComplete}
+              className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover disabled:opacity-50"
+            >
+              {completeBusy ? "처리 중…" : "강의 완료 처리"}
+            </button>
+          </section>
         )}
 
         {/* 일정 변경 */}
