@@ -265,13 +265,41 @@ export interface CalendarSession {
   assignment_type: AssignmentType | null;
 }
 
+// ---- 작업지시서 #015: 강사 불가기간 (아래 TimeConflict 확장에도 사용) ----
+
+export type ConflictType = "schedule" | "unavailable";
+
+export interface InstructorUnavailablePeriod {
+  id: string;
+  instructor_id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+}
+
+/** instructor_time_conflicts() RPC 결과 — 스케줄 중복 / 불가기간 겹침 공용 */
 export interface TimeConflict {
-  session_id: string;
-  school_name: string;
-  program_name: string;
+  conflict_type: ConflictType;
+  session_id: string | null; // 'schedule' 인 경우만
+  school_name: string | null; // 'schedule' 인 경우만
+  program_name: string | null; // 'schedule' 인 경우만
   scheduled_date: string;
-  time_slot: string | null;
-  session_status: string;
+  time_slot: string | null; // 'schedule' 인 경우만
+  session_status: string | null; // 'schedule' 인 경우만
+  unavailable_period_id: string | null; // 'unavailable' 인 경우만
+  unavailable_reason: string | null; // 'unavailable' 인 경우만
+}
+
+/** 다이얼로그 메시지용 — 충돌 사유(스케줄 중복/불가기간/둘 다)를 한 문장으로 */
+export function conflictReasonText(conflicts: TimeConflict[]): string {
+  const hasSchedule = conflicts.some((c) => c.conflict_type === "schedule");
+  const hasUnavailable = conflicts.some((c) => c.conflict_type === "unavailable");
+  if (hasSchedule && hasUnavailable) {
+    return "이미 다른 세션에 배정되어 있고, 강의 불가기간과도 겹칩니다";
+  }
+  if (hasUnavailable) return "강의 불가기간과 겹칩니다";
+  return "이미 다른 세션에 배정되어 있습니다";
 }
 
 // ---- 작업지시서 #007: 강사료 정산 ----

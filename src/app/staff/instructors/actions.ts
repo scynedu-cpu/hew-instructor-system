@@ -106,11 +106,17 @@ interface CertItem {
   issued_date: string;
   issuing_org: string;
 }
+interface UnavailableItem {
+  start_date: string;
+  end_date: string;
+  reason: string;
+}
 
 interface ProfileDetailsPayload {
   career: CareerItem[];
   certs: CertItem[];
   specialties: string[];
+  unavailable: UnavailableItem[];
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -173,6 +179,27 @@ async function replaceInstructorDetails(
     const { error } = await supabase
       .from("instructor_specialties")
       .insert(specs);
+    if (error) return { error: error.message };
+  }
+
+  // 강의 불가기간 전체 교체 (작업지시서 #015) — 시작일·종료일 둘 다 있고
+  // 종료일이 시작일 이상인 행만 저장, 그 외는 조용히 건너뜀(career/certs와 동일 방식)
+  await supabase
+    .from("instructor_unavailable_periods")
+    .delete()
+    .eq("instructor_id", instructorId);
+  const unavailable = payload.unavailable
+    .filter((u) => u.start_date && u.end_date && u.end_date >= u.start_date)
+    .map((u) => ({
+      instructor_id: instructorId,
+      start_date: u.start_date,
+      end_date: u.end_date,
+      reason: u.reason.trim() || null,
+    }));
+  if (unavailable.length > 0) {
+    const { error } = await supabase
+      .from("instructor_unavailable_periods")
+      .insert(unavailable);
     if (error) return { error: error.message };
   }
 

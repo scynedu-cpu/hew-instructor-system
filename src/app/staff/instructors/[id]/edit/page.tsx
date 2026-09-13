@@ -6,6 +6,7 @@ import type {
   CareerRow,
   CertRow,
   Instructor,
+  InstructorUnavailablePeriod,
   SpecialtyRow,
 } from "@/lib/types";
 import { InstructorProfileForm } from "@/components/instructor-profile-form";
@@ -25,7 +26,7 @@ export default async function InstructorProxyEditPage({
     .maybeSingle<Instructor>();
   if (!instructor) notFound();
 
-  const [{ data: career }, { data: certs }, { data: specialties }] =
+  const [{ data: career }, { data: certs }, { data: specialties }, { data: unavailable }] =
     await Promise.all([
       supabase
         .from("instructor_career_history")
@@ -43,6 +44,12 @@ export default async function InstructorProxyEditPage({
         .eq("instructor_id", id)
         .order("specialty")
         .returns<SpecialtyRow[]>(),
+      supabase
+        .from("instructor_unavailable_periods")
+        .select("*")
+        .eq("instructor_id", id)
+        .order("start_date", { ascending: false })
+        .returns<InstructorUnavailablePeriod[]>(),
     ]);
 
   return (
@@ -101,6 +108,7 @@ export default async function InstructorProxyEditPage({
         career={career ?? []}
         certs={certs ?? []}
         specialties={(specialties ?? []).map((s) => s.specialty)}
+        unavailable={unavailable ?? []}
       />
     </div>
   );

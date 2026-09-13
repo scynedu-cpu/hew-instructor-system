@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CareerRow, CertRow, Instructor } from "@/lib/types";
+import type { CareerRow, CertRow, Instructor, InstructorUnavailablePeriod } from "@/lib/types";
 import { AutofillPanel } from "@/components/autofill-panel";
 import { SpecialtyRecommendations } from "@/components/specialty-recommendations";
 import {
@@ -12,9 +12,11 @@ import {
 
 type CareerItem = { year_month: string; description: string; issuing_org: string };
 type CertItem = { cert_name: string; issued_date: string; issuing_org: string };
+type UnavailableItem = { start_date: string; end_date: string; reason: string };
 
 const emptyCareer: CareerItem = { year_month: "", description: "", issuing_org: "" };
 const emptyCert: CertItem = { cert_name: "", issued_date: "", issuing_org: "" };
+const emptyUnavailable: UnavailableItem = { start_date: "", end_date: "", reason: "" };
 
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
@@ -31,11 +33,13 @@ export function InstructorProfileForm({
   career,
   certs,
   specialties,
+  unavailable,
 }: {
   instructor: Instructor | null;
   career: CareerRow[];
   certs: CertRow[];
   specialties: string[];
+  unavailable: InstructorUnavailablePeriod[];
 }) {
   const router = useRouter();
   const isNew = !instructor;
@@ -67,6 +71,15 @@ export function InstructorProfileForm({
   );
   const [specs, setSpecs] = useState<string[]>(specialties);
   const [specInput, setSpecInput] = useState("");
+  const [unavailableRows, setUnavailableRows] = useState<UnavailableItem[]>(
+    unavailable.length
+      ? unavailable.map((u) => ({
+          start_date: u.start_date,
+          end_date: u.end_date,
+          reason: u.reason ?? "",
+        }))
+      : [{ ...emptyUnavailable }],
+  );
 
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -128,6 +141,7 @@ export function InstructorProfileForm({
         career: careerRows,
         certs: certRows,
         specialties: specs,
+        unavailable: unavailableRows,
       };
       if (instructor) {
         const res = await saveInstructorProfile(instructor.id, payload);
@@ -242,6 +256,37 @@ export function InstructorProfileForm({
               value={row.issuing_org}
               onChange={(e) => update({ issuing_org: e.target.value })}
               className={`${inputCls} w-40`}
+            />
+          </>
+        )}
+      />
+
+      {/* 강의 불가기간 (작업지시서 #015) */}
+      <RowSection
+        title="강의 불가기간"
+        rows={unavailableRows}
+        setRows={setUnavailableRows}
+        empty={emptyUnavailable}
+        render={(row, update) => (
+          <>
+            <input
+              type="date"
+              value={row.start_date}
+              onChange={(e) => update({ start_date: e.target.value })}
+              className={`${inputCls} w-40`}
+            />
+            <span className="text-sm text-muted">~</span>
+            <input
+              type="date"
+              value={row.end_date}
+              onChange={(e) => update({ end_date: e.target.value })}
+              className={`${inputCls} w-40`}
+            />
+            <input
+              placeholder="사유 (선택)"
+              value={row.reason}
+              onChange={(e) => update({ reason: e.target.value })}
+              className={`${inputCls} flex-1`}
             />
           </>
         )}

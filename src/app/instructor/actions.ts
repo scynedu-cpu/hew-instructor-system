@@ -235,3 +235,68 @@ export async function removeSpecialty(id: string): Promise<ActionResult> {
   revalidatePath("/instructor");
   return {};
 }
+
+/* ---------------- 강의 불가기간 (작업지시서 #015) ---------------- */
+
+export interface UnavailableInput {
+  start_date: string;
+  end_date: string;
+  reason: string;
+}
+
+function validateUnavailable(input: UnavailableInput): string | null {
+  if (!input.start_date || !input.end_date) return "시작일과 종료일을 입력하세요.";
+  if (input.end_date < input.start_date) return "종료일은 시작일보다 빠를 수 없습니다.";
+  return null;
+}
+
+export async function addUnavailable(input: UnavailableInput): Promise<ActionResult> {
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
+  const invalid = validateUnavailable(input);
+  if (invalid) return { error: invalid };
+  const { error } = await supabase.from("instructor_unavailable_periods").insert({
+    instructor_id: instructorId,
+    start_date: input.start_date,
+    end_date: input.end_date,
+    reason: input.reason.trim() || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/instructor");
+  return {};
+}
+
+export async function updateUnavailable(
+  id: string,
+  input: UnavailableInput,
+): Promise<ActionResult> {
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
+  const invalid = validateUnavailable(input);
+  if (invalid) return { error: invalid };
+  const { error } = await supabase
+    .from("instructor_unavailable_periods")
+    .update({
+      start_date: input.start_date,
+      end_date: input.end_date,
+      reason: input.reason.trim() || null,
+    })
+    .eq("id", id)
+    .eq("instructor_id", instructorId);
+  if (error) return { error: error.message };
+  revalidatePath("/instructor");
+  return {};
+}
+
+export async function deleteUnavailable(id: string): Promise<ActionResult> {
+  const { supabase, instructorId, readOnly } = await ctx();
+  if (readOnly) return READ_ONLY;
+  const { error } = await supabase
+    .from("instructor_unavailable_periods")
+    .delete()
+    .eq("id", id)
+    .eq("instructor_id", instructorId);
+  if (error) return { error: error.message };
+  revalidatePath("/instructor");
+  return {};
+}

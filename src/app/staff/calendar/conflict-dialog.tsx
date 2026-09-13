@@ -32,12 +32,19 @@ export function ConflictDialog({
         <h3 className="text-sm font-bold text-amber-700">⚠ {title}</h3>
         <p className="text-sm">{message}</p>
         <ul className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
-          {conflicts.map((c) => (
-            <li key={c.session_id}>
-              · {c.school_name} {c.program_name} ({c.scheduled_date}
-              {c.time_slot ? ` ${c.time_slot}` : ""})
-            </li>
-          ))}
+          {conflicts.map((c) =>
+            c.conflict_type === "unavailable" ? (
+              <li key={c.unavailable_period_id}>
+                · 강사 불가기간과 겹침 ({c.scheduled_date}
+                {c.unavailable_reason ? ` · ${c.unavailable_reason}` : ""})
+              </li>
+            ) : (
+              <li key={c.session_id}>
+                · {c.school_name} {c.program_name} ({c.scheduled_date}
+                {c.time_slot ? ` ${c.time_slot}` : ""})
+              </li>
+            ),
+          )}
         </ul>
         <p className="text-xs text-muted">
           담당자 재량으로 계속 진행할 수 있습니다.

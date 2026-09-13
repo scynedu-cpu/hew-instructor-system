@@ -8,6 +8,7 @@ import type {
   InstructorWithSpecialties,
   TimeConflict,
 } from "@/lib/types";
+import { conflictReasonText } from "@/lib/types";
 import {
   WEEKDAY_KR,
   dayOfMonth,
@@ -302,10 +303,10 @@ export function CalendarClient({
 
       {pending && (
         <ConflictDialog
-          title="일정 이동 — 강사 배정 중복"
+          title="일정 이동 — 강사 배정 충돌"
           message={`${pending.instructorName ?? "배정 강사"} 님이 ${pending.targetDate}${
             pending.timeSlot ? ` ${pending.timeSlot}` : ""
-          }에 이미 다른 세션에 배정되어 있습니다.`}
+          }에 ${conflictReasonText(pending.conflicts)}.`}
           conflicts={pending.conflicts}
           busy={busy}
           onCancel={() => setPending(null)}

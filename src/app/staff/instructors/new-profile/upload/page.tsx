@@ -27,6 +27,7 @@ export default async function NewInstructorProfileUploadPage() {
         career={[]}
         certs={[]}
         specialties={[]}
+        unavailable={[]}
       />
     </div>
   );

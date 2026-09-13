@@ -4,12 +4,14 @@ import type {
   CareerRow,
   CertRow,
   Instructor,
+  InstructorUnavailablePeriod,
   SpecialtyRow,
 } from "@/lib/types";
 import { ProfileSection } from "./profile-section";
 import { CareerSection } from "./career-section";
 import { CertSection } from "./cert-section";
 import { SpecialtySection } from "./specialty-section";
+import { UnavailableSection } from "./unavailable-section";
 
 export default async function InstructorProfilePage() {
   const ctx = await getInstructorContext();
@@ -30,7 +32,7 @@ export default async function InstructorProfilePage() {
     );
   }
 
-  const [{ data: career }, { data: certs }, { data: specialties }] =
+  const [{ data: career }, { data: certs }, { data: specialties }, { data: unavailable }] =
     await Promise.all([
       supabase
         .from("instructor_career_history")
@@ -50,6 +52,12 @@ export default async function InstructorProfilePage() {
         .eq("instructor_id", instructor.id)
         .order("specialty")
         .returns<SpecialtyRow[]>(),
+      supabase
+        .from("instructor_unavailable_periods")
+        .select("*")
+        .eq("instructor_id", instructor.id)
+        .order("start_date", { ascending: false })
+        .returns<InstructorUnavailablePeriod[]>(),
     ]);
 
   return (
@@ -64,6 +72,7 @@ export default async function InstructorProfilePage() {
         certs={certs ?? []}
         readOnly={readOnly}
       />
+      <UnavailableSection items={unavailable ?? []} readOnly={readOnly} />
     </div>
   );
 }

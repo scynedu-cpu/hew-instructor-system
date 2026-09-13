@@ -6,7 +6,7 @@ import type {
   InstructorWithSpecialties,
   TimeConflict,
 } from "@/lib/types";
-import { SESSION_STATUS_LABEL } from "@/lib/types";
+import { SESSION_STATUS_LABEL, conflictReasonText } from "@/lib/types";
 import {
   checkRescheduleConflict,
   checkSwapConflict,
@@ -113,10 +113,10 @@ export function SessionDetailPanel({
     }
     if (conflicts.length > 0) {
       setPending({
-        title: "일정 변경 — 강사 배정 중복",
+        title: "일정 변경 — 강사 배정 충돌",
         message: `${session.instructor_name ?? "배정 강사"} 님이 ${date}${
           timeSlot ? ` ${timeSlot}` : ""
-        }에 이미 다른 세션에 배정되어 있습니다.`,
+        }에 ${conflictReasonText(conflicts)}.`,
         conflicts,
         run: runReschedule,
       });
@@ -137,10 +137,10 @@ export function SessionDetailPanel({
     }
     if (conflicts.length > 0) {
       setPending({
-        title: "강사 교체 — 배정 중복",
+        title: "강사 교체 — 배정 충돌",
         message: `${instructorName.get(pickedInstructor) ?? "선택한 강사"} 님이 ${
           session.scheduled_date
-        }${session.time_slot ? ` ${session.time_slot}` : ""}에 이미 다른 세션에 배정되어 있습니다.`,
+        }${session.time_slot ? ` ${session.time_slot}` : ""}에 ${conflictReasonText(conflicts)}.`,
         conflicts,
         run: runSwap,
       });
