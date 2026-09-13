@@ -34,10 +34,10 @@ export default async function FinalConfirmDetailPage({
 
   const { data: currentInstructor } = await supabase
     .from("instructors")
-    .select("id,name,rating_avg,status,instructor_specialties(specialty)")
+    .select("id,name,effective_rating,status,instructor_specialties(specialty)")
     .eq("id", assignment.instructor_id)
     .maybeSingle<
-      Pick<Instructor, "id" | "name" | "rating_avg" | "status"> & {
+      Pick<Instructor, "id" | "name" | "effective_rating" | "status"> & {
         instructor_specialties: { specialty: string }[];
       }
     >();
@@ -45,7 +45,7 @@ export default async function FinalConfirmDetailPage({
   const { data: candidates } = await supabase
     .from("assignment_candidates")
     .select(
-      "*, instructor:instructors(id,name,rating_avg,status,instructor_specialties(specialty))",
+      "*, instructor:instructors(id,name,effective_rating,status,instructor_specialties(specialty))",
     )
     .eq("session_id", assignment.session_id)
     .order("rank", { ascending: true })

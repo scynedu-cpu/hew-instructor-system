@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireRole, PROXY_INSTRUCTOR_COOKIE } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { InstructorRatingAdjustmentHistory } from "@/lib/types";
 
 export interface InviteState {
   error?: string;
@@ -449,4 +450,89 @@ export async function inviteInstructor(
 
   revalidatePath("/staff/instructors");
   return { ok: `${name} 님에게 초대 메일을 보냈습니다. (${email})` };
+}
+
+/* ---------------- 강사평판 수동조정 (작업지시서 #017) ---------------- */
+
+export interface RatingAdjustmentState {
+  error?: string;
+  ok?: string;
+}
+
+/**
+ * 수동조정 저장 — instructors 의 조정 필드 갱신 + 변경 전/후 값을
+ * instructor_rating_adjustment_history 에 기록. effective_rating 은
+ * DB 계산컬럼이라 이 두 테이블만 갱신하면 매칭(#004)에 즉시 반영된다.
+ * enabled=false 로 끌 때는 조정 값 자체를 비워 "다시 켜면 새로 입력"
+ * 상태로 정리한다 — 이력에는 꺼졌다는 사실과 그 직전 값이 그대로 남는다.
+ */
+export async function saveRatingAdjustment(
+  instructorId: string,
+  input: { enabled: boolean; score: string; reason: string },
+): Promise<RatingAdjustmentState> {
+  const { account } = await requireRole("staff");
+
+  let score: number | null = null;
+  if (input.enabled) {
+    score = Number(input.score);
+    if (!input.score || !Number.isFinite(score) || score < 1 || score > 5) {
+      return { error: "조정점수는 1.0~5.0 사이로 입력하세요." };
+    }
+    score = Math.round(score * 100) / 100;
+  }
+
+  const supabase = await createClient();
+
+  const { data: before, error: beforeErr } = await supabase
+    .from("instructors")
+    .select("manager_adjustment_enabled, manager_adjustment_score")
+    .eq("id", instructorId)
+    .maybeSingle<{ manager_adjustment_enabled: boolean; manager_adjustment_score: number | null }>();
+  if (beforeErr) return { error: beforeErr.message };
+  if (!before) return { error: "강사를 찾을 수 없습니다." };
+
+  const changedBy = account.display_name ?? "담당자";
+  const now = new Date().toISOString();
+
+  const { error: updErr } = await supabase
+    .from("instructors")
+    .update({
+      manager_adjustment_enabled: input.enabled,
+      manager_adjustment_score: input.enabled ? score : null,
+      manager_adjustment_reason: input.enabled ? input.reason.trim() || null : null,
+      manager_adjustment_by: input.enabled ? changedBy : null,
+      manager_adjustment_at: input.enabled ? now : null,
+    })
+    .eq("id", instructorId);
+  if (updErr) return { error: updErr.message };
+
+  const { error: histErr } = await supabase
+    .from("instructor_rating_adjustment_history")
+    .insert({
+      instructor_id: instructorId,
+      enabled_before: before.manager_adjustment_enabled,
+      enabled_after: input.enabled,
+      score_before: before.manager_adjustment_score,
+      score_after: input.enabled ? score : null,
+      reason: input.enabled ? input.reason.trim() || null : null,
+      changed_by: changedBy,
+    });
+  if (histErr) return { error: histErr.message };
+
+  revalidatePath(`/staff/instructors/${instructorId}/edit`);
+  return { ok: input.enabled ? "평판 조정을 저장했습니다." : "평판 조정을 껐습니다." };
+}
+
+export async function listRatingAdjustmentHistory(
+  instructorId: string,
+): Promise<InstructorRatingAdjustmentHistory[]> {
+  await requireRole("staff");
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("instructor_rating_adjustment_history")
+    .select("*")
+    .eq("instructor_id", instructorId)
+    .order("changed_at", { ascending: false })
+    .returns<InstructorRatingAdjustmentHistory[]>();
+  return data ?? [];
 }

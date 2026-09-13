@@ -19,7 +19,7 @@ export function CandidateInfo({
         <span className="badge bg-brand text-brand-fg">{candidate.rank}순위</span>
         <span className="font-semibold">{ins?.name ?? "(삭제된 강사)"}</span>
         <span className="text-xs text-muted">
-          평점 {Number(ins?.rating_avg ?? 0).toFixed(2)}
+          평점 {Number(ins?.effective_rating ?? 0).toFixed(2)}
         </span>
         <span className="ml-auto text-sm font-semibold tabular-nums">
           {Number(candidate.match_score ?? 0).toFixed(2)}점

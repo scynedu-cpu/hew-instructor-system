@@ -32,7 +32,7 @@ export default async function AssignmentDetailPage({
   const { data: candidates } = await supabase
     .from("assignment_candidates")
     .select(
-      "*, instructor:instructors(id,name,rating_avg,status,instructor_specialties(specialty))",
+      "*, instructor:instructors(id,name,effective_rating,status,instructor_specialties(specialty))",
     )
     .eq("session_id", sessionId)
     .order("rank", { ascending: true })

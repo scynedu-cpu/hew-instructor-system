@@ -8,7 +8,7 @@ import type { AssignmentCandidateWithInstructor, Instructor } from "@/lib/types"
 const initial: ActionState = {};
 
 type CurrentInstructor =
-  | (Pick<Instructor, "id" | "name" | "rating_avg" | "status"> & {
+  | (Pick<Instructor, "id" | "name" | "effective_rating" | "status"> & {
       instructor_specialties: { specialty: string }[];
     })
   | null;
@@ -77,7 +77,7 @@ export function ConfirmPanel({
               {currentInstructor?.name ?? "(강사 없음)"}
             </span>
             <span className="text-xs text-muted">
-              평점 {Number(currentInstructor?.rating_avg ?? 0).toFixed(2)}
+              평점 {Number(currentInstructor?.effective_rating ?? 0).toFixed(2)}
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">

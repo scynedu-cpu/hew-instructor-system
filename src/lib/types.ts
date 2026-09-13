@@ -127,7 +127,13 @@ export interface Instructor {
   email: string | null;
   bank_account: string | null;
   status: "active" | "inactive";
-  rating_avg: number;
+  rating_avg: number; // 설문 기반 자동 점수 (#016)
+  manager_adjustment_enabled: boolean; // 담당자 수동조정 사용 여부 (#017)
+  manager_adjustment_score: number | null; // 1.0~5.0
+  manager_adjustment_reason: string | null;
+  manager_adjustment_by: string | null;
+  manager_adjustment_at: string | null;
+  effective_rating: number; // 매칭에 실제 쓰이는 값 — rating_avg 70% + 조정 30% (조정 꺼지면 rating_avg 와 동일)
   form_submitted_at: string | null;
   created_at: string;
 }
@@ -185,7 +191,7 @@ export interface AssignmentCandidate {
 /** 후보 목록 화면용: 후보 + 강사(전문분야 포함) 조인 */
 export interface AssignmentCandidateWithInstructor extends AssignmentCandidate {
   instructor:
-    | (Pick<Instructor, "id" | "name" | "rating_avg" | "status"> & {
+    | (Pick<Instructor, "id" | "name" | "effective_rating" | "status"> & {
         instructor_specialties: { specialty: string }[];
       })
     | null;
@@ -432,4 +438,18 @@ export interface SurveyLinkQuestion {
   question_text: string;
   options: string[] | null;
   display_order: number;
+}
+
+// ---- 작업지시서 #017: 담당자 강사평판 수동조정 ----
+
+export interface InstructorRatingAdjustmentHistory {
+  id: string;
+  instructor_id: string;
+  enabled_before: boolean;
+  enabled_after: boolean;
+  score_before: number | null;
+  score_after: number | null;
+  reason: string | null;
+  changed_by: string | null;
+  changed_at: string;
 }

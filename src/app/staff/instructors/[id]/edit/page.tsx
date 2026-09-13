@@ -6,11 +6,13 @@ import type {
   CareerRow,
   CertRow,
   Instructor,
+  InstructorRatingAdjustmentHistory,
   InstructorUnavailablePeriod,
   SpecialtyRow,
 } from "@/lib/types";
 import { InstructorProfileForm } from "@/components/instructor-profile-form";
-import { stopProxyEdit, enterInstructorProxy } from "../../actions";
+import { stopProxyEdit, enterInstructorProxy, listRatingAdjustmentHistory } from "../../actions";
+import { RatingAdjustmentSection } from "./rating-adjustment-section";
 
 export default async function InstructorProxyEditPage({
   params,
@@ -26,31 +28,43 @@ export default async function InstructorProxyEditPage({
     .maybeSingle<Instructor>();
   if (!instructor) notFound();
 
-  const [{ data: career }, { data: certs }, { data: specialties }, { data: unavailable }] =
-    await Promise.all([
-      supabase
-        .from("instructor_career_history")
-        .select("*")
-        .eq("instructor_id", id)
-        .returns<CareerRow[]>(),
-      supabase
-        .from("instructor_certifications")
-        .select("*")
-        .eq("instructor_id", id)
-        .returns<CertRow[]>(),
-      supabase
-        .from("instructor_specialties")
-        .select("*")
-        .eq("instructor_id", id)
-        .order("specialty")
-        .returns<SpecialtyRow[]>(),
-      supabase
-        .from("instructor_unavailable_periods")
-        .select("*")
-        .eq("instructor_id", id)
-        .order("start_date", { ascending: false })
-        .returns<InstructorUnavailablePeriod[]>(),
-    ]);
+  const [
+    { data: career },
+    { data: certs },
+    { data: specialties },
+    { data: unavailable },
+    ratingHistory,
+  ]: [
+    { data: CareerRow[] | null },
+    { data: CertRow[] | null },
+    { data: SpecialtyRow[] | null },
+    { data: InstructorUnavailablePeriod[] | null },
+    InstructorRatingAdjustmentHistory[],
+  ] = await Promise.all([
+    supabase
+      .from("instructor_career_history")
+      .select("*")
+      .eq("instructor_id", id)
+      .returns<CareerRow[]>(),
+    supabase
+      .from("instructor_certifications")
+      .select("*")
+      .eq("instructor_id", id)
+      .returns<CertRow[]>(),
+    supabase
+      .from("instructor_specialties")
+      .select("*")
+      .eq("instructor_id", id)
+      .order("specialty")
+      .returns<SpecialtyRow[]>(),
+    supabase
+      .from("instructor_unavailable_periods")
+      .select("*")
+      .eq("instructor_id", id)
+      .order("start_date", { ascending: false })
+      .returns<InstructorUnavailablePeriod[]>(),
+    listRatingAdjustmentHistory(id),
+  ]);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -110,6 +124,8 @@ export default async function InstructorProxyEditPage({
         specialties={(specialties ?? []).map((s) => s.specialty)}
         unavailable={unavailable ?? []}
       />
+
+      <RatingAdjustmentSection instructor={instructor} history={ratingHistory} />
     </div>
   );
 }

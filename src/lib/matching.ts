@@ -4,6 +4,9 @@
 // 세션당 1회 배치 계산한 뒤 최종 match_score(80/20) 로 상위 3명을 뽑아
 // assignment_candidates 에 저장한다. 초기 임시배정·최종확정 재계산 양쪽에서
 // 이 함수 하나를 공용으로 부른다(#004 의 최종 공식·상위3 로직은 변경 없음).
+// #017: 평점 점수는 rating_avg(설문 자동점수) 대신 effective_rating(설문
+// 70%+담당자 조정 30%, 조정 꺼지면 rating_avg 와 동일)을 쓴다 —
+// get_matching_candidate_pool() 이 이미 그 값을 반환하므로 이 파일은 그대로 사용.
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { createClient } from "@/lib/supabase/server";
@@ -15,7 +18,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 interface CandidatePoolRow {
   instructor_id: string;
   name: string;
-  rating_avg: number | null;
+  effective_rating: number | null; // 설문 자동점수+담당자 조정을 합친 값(#017) — 매칭 점수 계산은 이 값을 씀
   specialties: string[];
 }
 
@@ -165,15 +168,15 @@ export async function generateAssignmentCandidates(
 
   const scored = candidates.map((c) => {
     const specialtyMatch = similarity.get(c.instructor_id) ?? 0;
-    const ratingNorm = ((c.rating_avg ?? 0) / 5) * 100;
+    const ratingNorm = ((c.effective_rating ?? 0) / 5) * 100;
     const matchScore = specialtyMatch * 0.8 + ratingNorm * 0.2;
     return { ...c, matchScore };
   });
 
   scored.sort((a, b) => {
     if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-    const ra = a.rating_avg ?? 0;
-    const rb = b.rating_avg ?? 0;
+    const ra = a.effective_rating ?? 0;
+    const rb = b.effective_rating ?? 0;
     if (rb !== ra) return rb - ra;
     return a.name.localeCompare(b.name, "ko");
   });
