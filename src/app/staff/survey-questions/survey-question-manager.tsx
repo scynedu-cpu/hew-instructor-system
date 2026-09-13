@@ -1,8 +1,14 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import type { QuestionType, SurveyQuestion } from "@/lib/types";
-import { QUESTION_TYPE_LABEL } from "@/lib/types";
+import { useActionState, useMemo, useState, useTransition } from "react";
+import type {
+  QuestionScope,
+  QuestionType,
+  SurveyGroupCode,
+  SurveyQuestion,
+  SurveyQuestionGroup,
+} from "@/lib/types";
+import { QUESTION_TYPE_LABEL, SURVEY_GROUP_LABEL } from "@/lib/types";
 import {
   createSurveyQuestion,
   moveQuestion,
@@ -13,15 +19,20 @@ import {
 
 const initial: QuestionFormState = {};
 const TYPES: QuestionType[] = ["rating_5", "single_choice", "short_text", "long_text"];
+const GROUP_CODES: SurveyGroupCode[] = ["A", "B", "C", "D", "E"];
 
 export function SurveyQuestionManager({
   questions,
+  groups,
 }: {
   questions: SurveyQuestion[];
+  groups: SurveyQuestionGroup[];
 }) {
   const [state, formAction, pending] = useActionState(createSurveyQuestion, initial);
   const [newType, setNewType] = useState<QuestionType>("rating_5");
   const [newOptions, setNewOptions] = useState<string[]>(["", ""]);
+  const [newScope, setNewScope] = useState<QuestionScope>("common");
+  const [newGroup, setNewGroup] = useState<SurveyGroupCode>("A");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -42,6 +53,25 @@ export function SurveyQuestionManager({
     });
   }
 
+  // 공통 섹션 + 그룹(A~E) 섹션으로 구분 — 순서 변경도 이 섹션 내에서만 의미있음
+  const commonQuestions = useMemo(
+    () => questions.filter((q) => q.scope === "common"),
+    [questions],
+  );
+  const byGroup = useMemo(() => {
+    const map = new Map<SurveyGroupCode, SurveyQuestion[]>();
+    for (const code of GROUP_CODES) {
+      map.set(
+        code,
+        questions.filter((q) => q.scope === "group" && q.survey_group === code),
+      );
+    }
+    return map;
+  }, [questions]);
+
+  const groupLabel = (code: SurveyGroupCode) =>
+    groups.find((g) => g.group_code === code)?.label ?? SURVEY_GROUP_LABEL[code];
+
   return (
     <div className="flex flex-col gap-6">
       {/* 추가 */}
@@ -51,21 +81,54 @@ export function SurveyQuestionManager({
       >
         <h2 className="font-semibold">문항 추가</h2>
 
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          문항 유형 <span className="text-red-600">*</span>
-          <select
-            name="question_type"
-            value={newType}
-            onChange={(e) => setNewType(e.target.value as QuestionType)}
-            className="w-48 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-          >
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {QUESTION_TYPE_LABEL[t]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            범위 <span className="text-red-600">*</span>
+            <select
+              name="scope"
+              value={newScope}
+              onChange={(e) => setNewScope(e.target.value as QuestionScope)}
+              className="w-40 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+            >
+              <option value="common">공통</option>
+              <option value="group">그룹 전용</option>
+            </select>
+          </label>
+
+          {newScope === "group" && (
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              그룹 <span className="text-red-600">*</span>
+              <select
+                name="survey_group"
+                value={newGroup}
+                onChange={(e) => setNewGroup(e.target.value as SurveyGroupCode)}
+                className="w-56 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+              >
+                {GROUP_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {groupLabel(code)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            문항 유형 <span className="text-red-600">*</span>
+            <select
+              name="question_type"
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as QuestionType)}
+              className="w-48 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+            >
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {QUESTION_TYPE_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <label className="flex flex-col gap-1 text-sm font-medium">
           문항 내용 <span className="text-red-600">*</span>
@@ -138,10 +201,66 @@ export function SurveyQuestionManager({
         </button>
       </form>
 
-      {/* 목록 */}
+      {/* 목록 — 공통 + 그룹(A~E) 섹션으로 구분 */}
+      <QuestionSection
+        title="공통 문항"
+        description="모든 세션의 설문에 후보로 제안됩니다."
+        questions={commonQuestions}
+        busyId={busyId}
+        editingId={editingId}
+        onToggle={toggle}
+        onMove={move}
+        onEdit={setEditingId}
+        onEditDone={() => setEditingId(null)}
+      />
+      {GROUP_CODES.map((code) => (
+        <QuestionSection
+          key={code}
+          title={groupLabel(code)}
+          description="이 그룹에 속한 프로그램 세션의 설문에만 후보로 제안됩니다."
+          questions={byGroup.get(code) ?? []}
+          busyId={busyId}
+          editingId={editingId}
+          onToggle={toggle}
+          onMove={move}
+          onEdit={setEditingId}
+          onEditDone={() => setEditingId(null)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function QuestionSection({
+  title,
+  description,
+  questions,
+  busyId,
+  editingId,
+  onToggle,
+  onMove,
+  onEdit,
+  onEditDone,
+}: {
+  title: string;
+  description: string;
+  questions: SurveyQuestion[];
+  busyId: string | null;
+  editingId: string | null;
+  onToggle: (q: SurveyQuestion) => void;
+  onMove: (id: string, direction: "up" | "down") => void;
+  onEdit: (id: string) => void;
+  onEditDone: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <h3 className="text-sm font-bold">{title}</h3>
+        <p className="text-xs text-muted">{description}</p>
+      </div>
       <div className="rounded-lg border border-border">
         {questions.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted">
+          <p className="px-4 py-6 text-center text-sm text-muted">
             등록된 문항이 없습니다.
           </p>
         ) : (
@@ -154,10 +273,7 @@ export function SurveyQuestionManager({
                 }`}
               >
                 {editingId === q.id ? (
-                  <EditRow
-                    question={q}
-                    onDone={() => setEditingId(null)}
-                  />
+                  <EditRow question={q} onDone={onEditDone} />
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-col gap-1">
@@ -183,7 +299,7 @@ export function SurveyQuestionManager({
                       <button
                         type="button"
                         disabled={busyId === q.id || idx === 0}
-                        onClick={() => move(q.id, "up")}
+                        onClick={() => onMove(q.id, "up")}
                         className="rounded-md border border-border px-1.5 py-1 text-xs hover:bg-zinc-50 disabled:opacity-30"
                         title="위로"
                       >
@@ -192,7 +308,7 @@ export function SurveyQuestionManager({
                       <button
                         type="button"
                         disabled={busyId === q.id || idx === questions.length - 1}
-                        onClick={() => move(q.id, "down")}
+                        onClick={() => onMove(q.id, "down")}
                         className="rounded-md border border-border px-1.5 py-1 text-xs hover:bg-zinc-50 disabled:opacity-30"
                         title="아래로"
                       >
@@ -200,7 +316,7 @@ export function SurveyQuestionManager({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEditingId(q.id)}
+                        onClick={() => onEdit(q.id)}
                         className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-zinc-50"
                       >
                         수정
@@ -208,7 +324,7 @@ export function SurveyQuestionManager({
                       <button
                         type="button"
                         disabled={busyId === q.id}
-                        onClick={() => toggle(q)}
+                        onClick={() => onToggle(q)}
                         className={`rounded-md border px-2.5 py-1 text-xs ${
                           q.is_active
                             ? "border-border hover:bg-zinc-50"

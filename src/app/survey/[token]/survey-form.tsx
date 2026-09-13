@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { SurveyQuestion } from "@/lib/types";
+import type { SurveyLinkQuestion } from "@/lib/types";
 import { submitSurveyResponse, type SurveyAnswerInput } from "../actions";
 
 type AnswerValue = { rating?: number; text?: string };
 
 // 5점 척도만 필수 응답을 강제한다. 신분/성별(single_choice)도 필수,
 // 학년(short_text)·기타의견(long_text)은 선택 응답.
-function isRequired(q: SurveyQuestion): boolean {
+function isRequired(q: SurveyLinkQuestion): boolean {
   return q.question_type === "rating_5" || q.question_type === "single_choice";
 }
 
@@ -17,7 +17,7 @@ export function SurveyForm({
   questions,
 }: {
   token: string;
-  questions: SurveyQuestion[];
+  questions: SurveyLinkQuestion[];
 }) {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [busy, setBusy] = useState(false);

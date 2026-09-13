@@ -41,6 +41,7 @@ export interface Program {
   sub_program: string | null; // 세부항목
   matching_keyword: string | null; // 강사 매칭 키워드 (자동계산)
   is_active: boolean;
+  survey_group: SurveyGroupCode; // 설문 문항 그룹 (작업지시서 #013-1, 필수)
 }
 
 /** 프로그램 표시명 (대분류 - 세부) */
@@ -369,6 +370,8 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 
 export type QuestionType = "rating_5" | "single_choice" | "short_text" | "long_text";
 
+export type QuestionScope = "common" | "group";
+
 export interface SurveyQuestion {
   id: string;
   question_type: QuestionType;
@@ -376,6 +379,8 @@ export interface SurveyQuestion {
   options: string[] | null; // single_choice 전용
   display_order: number;
   is_active: boolean;
+  scope: QuestionScope;
+  survey_group: SurveyGroupCode | null; // scope='group' 인 경우만
   created_at: string;
 }
 
@@ -401,3 +406,30 @@ export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
   short_text: "단답형",
   long_text: "서술형",
 };
+
+// ---- 작업지시서 #013-1: 설문 문항 그룹화 (공통 + 프로그램 성격별) ----
+
+export type SurveyGroupCode = "A" | "B" | "C" | "D" | "E";
+
+export interface SurveyQuestionGroup {
+  group_code: SurveyGroupCode;
+  label: string;
+  display_order: number;
+}
+
+export const SURVEY_GROUP_LABEL: Record<SurveyGroupCode, string> = {
+  A: "A형 · 직업체험/현장체험형",
+  B: "B형 · 직업인특강/토크콘서트형",
+  C: "C형 · AI·디지털체험형",
+  D: "D형 · 창업·경제교육형",
+  E: "E형 · 전환기/성장지원형",
+};
+
+/** get_survey_link_questions() RPC 결과 — 공개 응답 페이지가 그대로 렌더링 */
+export interface SurveyLinkQuestion {
+  id: string;
+  question_type: QuestionType;
+  question_text: string;
+  options: string[] | null;
+  display_order: number;
+}

@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import type {
   AssignmentHistoryRow,
   ScheduleHistoryRow,
+  SurveyQuestion,
   TimeConflict,
 } from "@/lib/types";
 
@@ -196,8 +197,10 @@ export async function completeSession(formData: FormData): Promise<CalActionResu
 }
 
 /**
- * 세션별 설문 QR — 작업지시서 #013.
- * survey_links 는 session_id 에 UNIQUE 라 없으면 생성, 있으면 그대로 재사용.
+ * 세션별 설문 QR — 작업지시서 #013 / #013-1(문항 그룹화·확정 방식으로 확장).
+ * survey_links 는 session_id 에 UNIQUE 라 세션당 1개만 존재. 처음 생성할
+ * 때는 문항 선택(공통+그룹 자동조합, 제외만 가능) → confirmSurveyLink() 로
+ * 확정해야 링크가 만들어지고, 이후엔 getSurveyLink() 로 그대로 재사용한다.
  * 반환하는 url 은 NEXT_PUBLIC_SITE_URL 이 설정돼 있으면 절대경로, 아니면
  * 상대경로(/survey/{token})만 주고 클라이언트에서 현재 origin 을 붙인다.
  */
@@ -207,45 +210,112 @@ export interface SurveyLinkResult {
   error?: string;
 }
 
-export async function getOrCreateSurveyLink(
-  sessionId: string,
-): Promise<SurveyLinkResult> {
-  const { account } = await requireRole("staff");
+function surveyUrl(token: string): string {
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
+  return site ? `${site}/survey/${token}` : `/survey/${token}`;
+}
+
+/**
+ * 이미 확정된 링크가 있으면 그대로 반환(재선택 불가 — 작업지시서 #013-1
+ * 3-3 "한 번 확정되면 고정"). 없으면 token 없이 반환해 호출부(QR 다이얼로그)가
+ * 문항 선택 화면을 띄우게 한다.
+ */
+export async function getSurveyLink(sessionId: string): Promise<SurveyLinkResult> {
+  await requireRole("staff");
   const supabase = await createClient();
 
-  const { data: existing, error: selErr } = await supabase
+  const { data, error } = await supabase
     .from("survey_links")
     .select("token")
     .eq("session_id", sessionId)
     .maybeSingle<{ token: string }>();
-  if (selErr) return { error: selErr.message };
+  if (error) return { error: error.message };
+  if (!data) return {};
+  return { token: data.token, url: surveyUrl(data.token) };
+}
 
-  let token = existing?.token;
-  if (!token) {
-    token = crypto.randomUUID();
-    const { error: insErr } = await supabase.from("survey_links").insert({
+/**
+ * QR 최초 생성 시 미리보기에 띄울 문항 후보 — 그 세션 프로그램의
+ * survey_group 을 기준으로 공통 문항 전체 + 해당 그룹 문항 전체(활성만)를
+ * scope, display_order 순으로 반환. 담당자는 이 중 제외만 할 수 있다.
+ */
+export async function getSuggestedSurveyQuestions(
+  sessionId: string,
+): Promise<{ questions?: SurveyQuestion[]; error?: string }> {
+  await requireRole("staff");
+  const supabase = await createClient();
+
+  const { data: session, error: sessErr } = await supabase
+    .from("class_sessions")
+    .select("program:programs(survey_group)")
+    .eq("id", sessionId)
+    .maybeSingle<{ program: { survey_group: string } | null }>();
+  if (sessErr) return { error: sessErr.message };
+  const group = session?.program?.survey_group;
+  if (!group) return { error: "이 세션의 프로그램에 설문 그룹이 지정되어 있지 않습니다." };
+
+  const { data, error } = await supabase
+    .from("survey_questions")
+    .select("*")
+    .eq("is_active", true)
+    .or(`scope.eq.common,survey_group.eq.${group}`)
+    .order("scope", { ascending: true }) // 'common' < 'group' 알파벳순 — 공통이 먼저
+    .order("display_order", { ascending: true })
+    .returns<SurveyQuestion[]>();
+  if (error) return { error: error.message };
+  return { questions: data ?? [] };
+}
+
+/**
+ * 문항 선택 확정 — survey_links 1건 생성 + survey_link_questions 로 그
+ * 시점의 선택 결과를 고정 저장한다. 이후 survey_questions 나
+ * programs.survey_group 이 바뀌어도 이 세션의 구성은 그대로 유지된다.
+ */
+export async function confirmSurveyLink(
+  sessionId: string,
+  questionIds: string[],
+): Promise<SurveyLinkResult> {
+  const { account } = await requireRole("staff");
+  if (questionIds.length === 0) return { error: "문항을 1개 이상 선택하세요." };
+
+  const supabase = await createClient();
+
+  const token = crypto.randomUUID();
+  const { data: link, error: insErr } = await supabase
+    .from("survey_links")
+    .insert({
       session_id: sessionId,
       token,
       created_by: account.display_name ?? "담당자",
-    });
-    if (insErr) {
-      // session_id UNIQUE 라 동시 클릭 등으로 이미 생성된 경우 — 기존 것 재조회
-      if (insErr.code === "23505") {
-        const { data: retry } = await supabase
-          .from("survey_links")
-          .select("token")
-          .eq("session_id", sessionId)
-          .maybeSingle<{ token: string }>();
-        if (retry?.token) token = retry.token;
-        else return { error: insErr.message };
-      } else {
-        return { error: insErr.message };
-      }
+    })
+    .select("id, token")
+    .single<{ id: string; token: string }>();
+
+  if (insErr) {
+    // session_id UNIQUE 라 동시 클릭 등으로 이미 생성된 경우 — 기존 것 재조회
+    if (insErr.code === "23505") {
+      const { data: retry } = await supabase
+        .from("survey_links")
+        .select("token")
+        .eq("session_id", sessionId)
+        .maybeSingle<{ token: string }>();
+      if (retry?.token) return { token: retry.token, url: surveyUrl(retry.token) };
     }
+    return { error: insErr.message };
   }
 
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
-  return { token, url: site ? `${site}/survey/${token}` : `/survey/${token}` };
+  const rows = questionIds.map((question_id, idx) => ({
+    survey_link_id: link.id,
+    question_id,
+    display_order: idx + 1,
+  }));
+  const { error: qErr } = await supabase.from("survey_link_questions").insert(rows);
+  if (qErr) {
+    await supabase.from("survey_links").delete().eq("id", link.id);
+    return { error: qErr.message };
+  }
+
+  return { token: link.token, url: surveyUrl(link.token) };
 }
 
 export interface SessionHistory {

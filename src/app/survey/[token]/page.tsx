@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SurveyContext, SurveyQuestion } from "@/lib/types";
+import type { SurveyContext, SurveyLinkQuestion } from "@/lib/types";
 import { SurveyForm } from "./survey-form";
 
 export default async function PublicSurveyPage({
@@ -26,12 +26,13 @@ export default async function PublicSurveyPage({
     );
   }
 
-  const { data: questions } = await supabase
-    .from("survey_questions")
-    .select("*")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true })
-    .returns<SurveyQuestion[]>();
+  // #013-1: 활성 문항을 직접 조회하지 않고, QR 확정 시점에 고정된 문항
+  // 구성(survey_link_questions)만 그대로 렌더링한다 — 이후 survey_questions
+  // 나 programs.survey_group 이 바뀌어도 이 세션의 설문은 그대로 유지됨.
+  const { data: questionRows } = await supabase.rpc("get_survey_link_questions", {
+    p_token: token,
+  });
+  const questions = (questionRows as SurveyLinkQuestion[] | null) ?? [];
 
   return (
     <main className="flex min-h-screen justify-center bg-zinc-50 p-4">
@@ -47,7 +48,7 @@ export default async function PublicSurveyPage({
           </p>
         </div>
 
-        {questions && questions.length > 0 ? (
+        {questions.length > 0 ? (
           <SurveyForm token={token} questions={questions} />
         ) : (
           <p className="rounded-lg border border-dashed border-border bg-surface px-4 py-8 text-center text-sm text-muted">

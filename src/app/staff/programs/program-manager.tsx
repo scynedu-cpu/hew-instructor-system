@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState, useMemo, useState, useTransition } from "react";
-import type { Program } from "@/lib/types";
+import type { Program, SurveyGroupCode } from "@/lib/types";
+import { SURVEY_GROUP_LABEL } from "@/lib/types";
 import { createProgram, toggleProgramActive, type ProgramFormState } from "./actions";
 
 const initial: ProgramFormState = {};
+const GROUP_CODES: SurveyGroupCode[] = ["A", "B", "C", "D", "E"];
 
 export function ProgramManager({ programs }: { programs: Program[] }) {
   const [state, formAction, pending] = useActionState(createProgram, initial);
   const [subs, setSubs] = useState<string[]>([""]);
+  const [surveyGroup, setSurveyGroup] = useState<SurveyGroupCode>("A");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, startToggle] = useTransition();
 
@@ -47,6 +50,27 @@ export function ProgramManager({ programs }: { programs: Program[] }) {
             placeholder="예: 현장직업체험, 직업인특강"
             className="rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
           />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          설문 문항 그룹{" "}
+          <span className="text-red-600">*</span>{" "}
+          <span className="font-normal text-muted">
+            세부항목 전체에 동일하게 적용됩니다(QR 설문 문항 자동 구성 기준)
+          </span>
+          <select
+            name="survey_group"
+            required
+            value={surveyGroup}
+            onChange={(e) => setSurveyGroup(e.target.value as SurveyGroupCode)}
+            className="w-64 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+          >
+            {GROUP_CODES.map((code) => (
+              <option key={code} value={code}>
+                {SURVEY_GROUP_LABEL[code]}
+              </option>
+            ))}
+          </select>
         </label>
 
         <div className="flex flex-col gap-1.5 text-sm font-medium">
@@ -118,8 +142,11 @@ export function ProgramManager({ programs }: { programs: Program[] }) {
         )}
         {grouped.map(([category, rows]) => (
           <div key={category} className="rounded-lg border border-border">
-            <div className="border-b border-border bg-zinc-50 px-3 py-2 text-sm font-semibold">
+            <div className="flex items-center gap-2 border-b border-border bg-zinc-50 px-3 py-2 text-sm font-semibold">
               {category}
+              <span className="badge bg-zinc-200 text-zinc-600">
+                {SURVEY_GROUP_LABEL[rows[0].survey_group]}
+              </span>
             </div>
             <ul className="divide-y divide-border text-sm">
               {rows.map((p) => (
