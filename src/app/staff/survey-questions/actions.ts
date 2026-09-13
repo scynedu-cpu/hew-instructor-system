@@ -149,6 +149,24 @@ export async function toggleQuestionActive(
   return {};
 }
 
+/** 섹션(공통 또는 특정 그룹) 전체를 한 번에 활성화/비활성화 — 개별 토글과
+ *  동일한 is_active 컬럼을 그대로 쓰므로 응답 연결에는 영향 없다. */
+export async function bulkToggleQuestions(
+  ids: string[],
+  nextActive: boolean,
+): Promise<{ error?: string }> {
+  await requireRole("staff");
+  if (ids.length === 0) return {};
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("survey_questions")
+    .update({ is_active: nextActive })
+    .in("id", ids);
+  if (error) return { error: error.message };
+  revalidatePath(PATH);
+  return {};
+}
+
 /** 순서 변경 — 같은 scope(+그룹) 안에서만 바로 위/아래 문항과 display_order
  *  를 맞바꾼다(공통/그룹별로 화면이 구분돼 있으므로 순서도 그 안에서만 의미있음). */
 export async function moveQuestion(

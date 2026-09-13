@@ -10,6 +10,7 @@ import type {
 } from "@/lib/types";
 import { QUESTION_TYPE_LABEL, SURVEY_GROUP_LABEL } from "@/lib/types";
 import {
+  bulkToggleQuestions,
   createSurveyQuestion,
   moveQuestion,
   toggleQuestionActive,
@@ -34,6 +35,7 @@ export function SurveyQuestionManager({
   const [newScope, setNewScope] = useState<QuestionScope>("common");
   const [newGroup, setNewGroup] = useState<SurveyGroupCode>("A");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busySection, setBusySection] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -50,6 +52,14 @@ export function SurveyQuestionManager({
     startTransition(async () => {
       await moveQuestion(id, direction);
       setBusyId(null);
+    });
+  }
+
+  function bulkToggle(sectionKey: string, ids: string[], nextActive: boolean) {
+    setBusySection(sectionKey);
+    startTransition(async () => {
+      await bulkToggleQuestions(ids, nextActive);
+      setBusySection(null);
     });
   }
 
@@ -203,12 +213,15 @@ export function SurveyQuestionManager({
 
       {/* 목록 — 공통 + 그룹(A~E) 섹션으로 구분 */}
       <QuestionSection
+        sectionKey="common"
         title="공통 문항"
         description="모든 세션의 설문에 후보로 제안됩니다."
         questions={commonQuestions}
         busyId={busyId}
+        busySection={busySection}
         editingId={editingId}
         onToggle={toggle}
+        onBulkToggle={bulkToggle}
         onMove={move}
         onEdit={setEditingId}
         onEditDone={() => setEditingId(null)}
@@ -216,12 +229,15 @@ export function SurveyQuestionManager({
       {GROUP_CODES.map((code) => (
         <QuestionSection
           key={code}
+          sectionKey={code}
           title={groupLabel(code)}
           description="이 그룹에 속한 프로그램 세션의 설문에만 후보로 제안됩니다."
           questions={byGroup.get(code) ?? []}
           busyId={busyId}
+          busySection={busySection}
           editingId={editingId}
           onToggle={toggle}
+          onBulkToggle={bulkToggle}
           onMove={move}
           onEdit={setEditingId}
           onEditDone={() => setEditingId(null)}
@@ -232,31 +248,64 @@ export function SurveyQuestionManager({
 }
 
 function QuestionSection({
+  sectionKey,
   title,
   description,
   questions,
   busyId,
+  busySection,
   editingId,
   onToggle,
+  onBulkToggle,
   onMove,
   onEdit,
   onEditDone,
 }: {
+  sectionKey: string;
   title: string;
   description: string;
   questions: SurveyQuestion[];
   busyId: string | null;
+  busySection: string | null;
   editingId: string | null;
   onToggle: (q: SurveyQuestion) => void;
+  onBulkToggle: (sectionKey: string, ids: string[], nextActive: boolean) => void;
   onMove: (id: string, direction: "up" | "down") => void;
   onEdit: (id: string) => void;
   onEditDone: () => void;
 }) {
+  const sectionBusy = busySection === sectionKey;
+  const activeIds = questions.filter((q) => q.is_active).map((q) => q.id);
+  const inactiveIds = questions.filter((q) => !q.is_active).map((q) => q.id);
+  const allIds = questions.map((q) => q.id);
+
   return (
     <div className="flex flex-col gap-2">
-      <div>
-        <h3 className="text-sm font-bold">{title}</h3>
-        <p className="text-xs text-muted">{description}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold">{title}</h3>
+          <p className="text-xs text-muted">{description}</p>
+        </div>
+        {questions.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={sectionBusy || activeIds.length === allIds.length}
+              onClick={() => onBulkToggle(sectionKey, allIds, true)}
+              className="rounded-md border border-brand px-2.5 py-1 text-xs text-brand hover:bg-blue-50 disabled:opacity-40"
+            >
+              {sectionBusy ? "처리 중…" : "전체 활성화"}
+            </button>
+            <button
+              type="button"
+              disabled={sectionBusy || inactiveIds.length === allIds.length}
+              onClick={() => onBulkToggle(sectionKey, allIds, false)}
+              className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-zinc-50 disabled:opacity-40"
+            >
+              {sectionBusy ? "처리 중…" : "전체 삭제"}
+            </button>
+          </div>
+        )}
       </div>
       <div className="rounded-lg border border-border">
         {questions.length === 0 ? (
