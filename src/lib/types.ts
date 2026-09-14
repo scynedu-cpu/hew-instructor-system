@@ -513,3 +513,37 @@ export interface ParticipationRow {
   expectedCount: number | null; // student_count 에서 숫자 추출 실패 시 null
   rate: number | null; // % — expectedCount 가 null 이면 null("계산 불가")
 }
+
+// ---- 작업지시서 #019: 강사별 강의이력 조회 및 경력증명서 발급 ----
+
+export interface OrgSettings {
+  id: true;
+  org_name: string;
+  ceo_name: string;
+  address: string;
+  seal_image_path: string | null;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface CareerCertificateIssuance {
+  id: string;
+  instructor_id: string;
+  document_no: string;
+  period_from: string | null;
+  period_to: string | null;
+  total_count: number;
+  total_hours: number;
+  file_path: string;
+  issued_by: string | null;
+  issued_at: string;
+}
+
+/** 강의이력 조회 화면 한 행 — lecture_confirmations × class_sessions/schools/programs */
+export interface LectureHistoryRow {
+  id: string;
+  actualDate: string | null;
+  actualHours: number | null;
+  schoolName: string;
+  programLabel: string;
+}
