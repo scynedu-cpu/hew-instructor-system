@@ -387,6 +387,7 @@ export interface SurveyQuestion {
   is_active: boolean;
   scope: QuestionScope;
   survey_group: SurveyGroupCode | null; // scope='group' 인 경우만
+  is_instructor_rating: boolean; // 강사평가 전용 문항 플래그 (#016)
   created_at: string;
 }
 
@@ -452,4 +453,63 @@ export interface InstructorRatingAdjustmentHistory {
   reason: string | null;
   changed_by: string | null;
   changed_at: string;
+}
+
+// ---- 작업지시서 #014-1: 만족도설문 심화분석 ----
+
+/** 서술형 AI 분석 범위 — 지시서 2-3, 넷 중 하나만 선택(조합 없음) */
+export type InsightScopeType = "all" | "school" | "program_group" | "instructor";
+
+export interface SurveyTextInsightTopic {
+  topic: string;
+  count: number;
+  examples: string[];
+}
+
+export interface SurveyTextInsight {
+  id: string;
+  question_id: string;
+  scope_type: InsightScopeType;
+  scope_value: string; // scope_type='all'이면 ''
+  response_count: number;
+  topics: SurveyTextInsightTopic[];
+  analyzed_by: string | null;
+  analyzed_at: string;
+}
+
+/** 문항별 평균 (2-1) */
+export interface QuestionAverage {
+  id: string;
+  text: string;
+  scope: QuestionScope;
+  group: SurveyGroupCode | null;
+  avg: number | null;
+  count: number;
+}
+
+/** 순위 막대그래프 한 행 (2-2) — 표본 5건 미만은 lowSample */
+export interface RankingRow {
+  key: string;
+  label: string;
+  avg: number;
+  count: number;
+  lowSample: boolean;
+}
+
+/** 강사 × (학교·프로그램) 교차표 셀 (2-2) */
+export interface CrossTabCell {
+  avg: number;
+  count: number;
+  lowSample: boolean;
+}
+
+/** 세션 참여율 (2-4) */
+export interface ParticipationRow {
+  sessionId: string;
+  schoolName: string;
+  programLabel: string;
+  scheduledDate: string | null;
+  responseCount: number;
+  expectedCount: number | null; // student_count 에서 숫자 추출 실패 시 null
+  rate: number | null; // % — expectedCount 가 null 이면 null("계산 불가")
 }

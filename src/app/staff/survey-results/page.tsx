@@ -68,12 +68,20 @@ export default async function SurveyResultsPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-bold">만족도 설문 결과</h1>
-        <p className="mt-1 text-sm text-muted">
-          세션(강의)별로 QR 설문 응답 수를 확인하고, 상세에서 문항별 집계를
-          볼 수 있습니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">만족도 설문 결과</h1>
+          <p className="mt-1 text-sm text-muted">
+            세션(강의)별로 QR 설문 응답 수를 확인하고, 상세에서 문항별 집계를
+            볼 수 있습니다.
+          </p>
+        </div>
+        <Link
+          href="/staff/survey-results/insights"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium hover:bg-zinc-50"
+        >
+          심화분석 보기 →
+        </Link>
       </div>
 
       <form
