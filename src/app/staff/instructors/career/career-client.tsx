@@ -45,19 +45,19 @@ export function CareerClient({ instructors }: { instructors: RefInstructor[] }) 
     setLoaded(true);
   }
 
+  // 강사를 바꾸면 이전 조회 결과만 지운다 — 실제 조회는 "조회" 버튼을 눌러야
+  // 실행됨(자동 조회 없음).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (instructorId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 강사 선택 시 1회 조회
-      load();
-    } else {
-      setRows([]);
-      setTotalCount(0);
-      setTotalHours(0);
-      setIssuances([]);
-      setLoaded(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setRows([]);
+    setTotalCount(0);
+    setTotalHours(0);
+    setIssuances([]);
+    setLoaded(false);
+    setError(null);
+    setIssueMsg(null);
   }, [instructorId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function onIssue() {
     if (!instructorId) return;
@@ -125,6 +125,10 @@ export function CareerClient({ instructors }: { instructors: RefInstructor[] }) 
         <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
           위에서 강사를 선택하세요.
         </p>
+      ) : !loaded && !loading ? (
+        <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
+          &ldquo;조회&rdquo; 버튼을 눌러 강의이력을 확인하세요.
+        </p>
       ) : (
         <>
           {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -186,7 +190,11 @@ export function CareerClient({ instructors }: { instructors: RefInstructor[] }) 
 
           <section>
             <h2 className="mb-2 text-sm font-semibold">발급 이력</h2>
-            {issuances.length === 0 ? (
+            {!loaded ? (
+              <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted">
+                불러오는 중…
+              </p>
+            ) : issuances.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted">
                 발급 이력이 없습니다.
               </p>
