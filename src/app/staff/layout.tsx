@@ -9,6 +9,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
       roleLabel="담당자"
       userName={account.display_name ?? "담당자"}
       nav={[
+        { href: "/staff", label: "오늘의 현황" },
         { href: "/staff/requests", label: "교육 신청 관리" },
         { href: "/staff/assignments", label: "강사 배정" },
         { href: "/staff/calendar", label: "캘린더" },

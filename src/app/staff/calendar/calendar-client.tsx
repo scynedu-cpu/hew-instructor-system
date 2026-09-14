@@ -39,6 +39,7 @@ export function CalendarClient({
   days,
   sessions,
   instructors,
+  initialSelectedId = null,
 }: {
   view: "month" | "week";
   year: number;
@@ -47,12 +48,14 @@ export function CalendarClient({
   days: string[];
   sessions: CalendarSession[];
   instructors: InstructorWithSpecialties[];
+  /** 작업지시서 #018 — 운영 대시보드에서 특정 세션 상세를 바로 열기 위한 딥링크 */
+  initialSelectedId?: string | null;
 }) {
   const router = useRouter();
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [pending, setPending] = useState<{
     sessionId: string;
     targetDate: string;

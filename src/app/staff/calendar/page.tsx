@@ -40,6 +40,9 @@ export default async function StaffCalendarPage({
   const month = Number(sp.m) || t.m;
   const anchor =
     typeof sp.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) ? sp.d : today;
+  // 작업지시서 #018 — 운영 대시보드의 "완료 처리하기" 버튼이 특정 세션을
+  // 바로 열어볼 수 있도록 하는 딥링크(?sessionId=...)
+  const initialSelectedId = typeof sp.sessionId === "string" ? sp.sessionId : null;
 
   const days = view === "week" ? weekGrid(anchor) : monthGrid(year, month);
   const rangeStart = days[0];
@@ -115,6 +118,7 @@ export default async function StaffCalendarPage({
         days={days}
         sessions={sessions}
         instructors={instructors}
+        initialSelectedId={initialSelectedId}
       />
     </div>
   );

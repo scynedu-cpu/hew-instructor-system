@@ -47,7 +47,8 @@ export async function requireRole(role: AccountRole): Promise<CurrentUser> {
 export function roleHome(role: AccountRole): string {
   switch (role) {
     case "staff":
-      return "/staff/requests";
+      // 작업지시서 #018 — staff 로그인 후 랜딩은 운영 모니터링 대시보드
+      return "/staff";
     case "school":
       return "/school";
     case "instructor":
