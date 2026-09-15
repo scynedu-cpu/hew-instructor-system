@@ -23,6 +23,16 @@ function str(v: unknown): string {
 }
 
 /**
+ * "YYYY-MM-DD" 완전한 날짜만 통과 — AI 자동채움이 "2007-03"처럼 연·월만
+ * 읽어온 경우 등 <input type="date"> 에 반영해도 화면엔 빈칸으로 보이면서
+ * 저장 시점에야 DB 오류로 터지는 걸 막기 위해, 애초에 그런 값은 채우지
+ * 않고 담당자가 직접 입력하게 비워둔다.
+ */
+function isFullDate(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+/**
  * 강사 기본정보 + 경력/자격증/전문분야 대리입력 폼.
  * `instructor` 가 있으면 기존 강사 수정(작업지시서 #008), 없으면 신규 생성
  * (작업지시서 #008-2 "파일/사진으로 시작") — 저장 한 번으로 instructors row
@@ -87,7 +97,7 @@ export function InstructorProfileForm({
 
   function applyAutofill(f: Record<string, unknown>) {
     if (str(f.name)) setName(str(f.name));
-    if (str(f.birth_date)) setBirthDate(str(f.birth_date));
+    if (isFullDate(str(f.birth_date))) setBirthDate(str(f.birth_date));
     if (str(f.address)) setAddress(str(f.address));
     if (str(f.home_phone)) setHomePhone(str(f.home_phone));
     if (str(f.mobile_phone)) setMobilePhone(str(f.mobile_phone));
@@ -110,9 +120,10 @@ export function InstructorProfileForm({
       const rows = (f.certifications as unknown[])
         .map((c) => {
           const o = (c ?? {}) as Record<string, unknown>;
+          const issuedDate = str(o.issued_date);
           return {
             cert_name: str(o.cert_name),
-            issued_date: str(o.issued_date),
+            issued_date: isFullDate(issuedDate) ? issuedDate : "",
             issuing_org: str(o.issuing_org),
           };
         })

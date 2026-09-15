@@ -122,6 +122,22 @@ interface ProfileDetailsPayload {
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+/**
+ * "YYYY-MM-DD" 형태의 완전한 날짜만 통과시키고 그 외(빈 값, "2007-03"처럼
+ * 일부만 있는 값, 잘못된 날짜 등)는 null 로 바꾼다. AI 자동채움이 문서에서
+ * 연·월만 읽고 일자를 못 찾았을 때 등 불완전한 값을 그대로 date 컬럼에
+ * insert/update 하면 "invalid input syntax for type date" 로 저장 자체가
+ * 실패하므로, DB에 닿기 전에 여기서 한 번 막는다.
+ */
+function normalizeDate(v: string | null | undefined): string | null {
+  const s = (v ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const valid = dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  return valid ? s : null;
+}
+
 /** 경력/자격증/전문분야 전체 교체 — 신규 생성·기존 수정 양쪽에서 공용 */
 async function replaceInstructorDetails(
   supabase: SupabaseServerClient,
@@ -158,7 +174,7 @@ async function replaceInstructorDetails(
     .map((c) => ({
       instructor_id: instructorId,
       cert_name: c.cert_name.trim(),
-      issued_date: c.issued_date || null,
+      issued_date: normalizeDate(c.issued_date),
       issuing_org: c.issuing_org.trim() || null,
     }));
   if (certs.length > 0) {
@@ -190,6 +206,11 @@ async function replaceInstructorDetails(
     .delete()
     .eq("instructor_id", instructorId);
   const unavailable = payload.unavailable
+    .map((u) => ({
+      ...u,
+      start_date: normalizeDate(u.start_date),
+      end_date: normalizeDate(u.end_date),
+    }))
     .filter((u) => u.start_date && u.end_date && u.end_date >= u.start_date)
     .map((u) => ({
       instructor_id: instructorId,
@@ -230,7 +251,7 @@ export async function saveInstructorProfile(
     .from("instructors")
     .update({
       name,
-      birth_date: payload.birth_date || null,
+      birth_date: normalizeDate(payload.birth_date),
       address: payload.address.trim() || null,
       home_phone: payload.home_phone.trim() || null,
       mobile_phone: payload.mobile_phone.trim() || null,
@@ -273,7 +294,7 @@ export async function createInstructorProfileFull(
     .from("instructors")
     .insert({
       name,
-      birth_date: payload.birth_date || null,
+      birth_date: normalizeDate(payload.birth_date),
       address: payload.address.trim() || null,
       home_phone: payload.home_phone.trim() || null,
       mobile_phone: payload.mobile_phone.trim() || null,
