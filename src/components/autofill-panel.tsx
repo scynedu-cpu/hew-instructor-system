@@ -10,7 +10,11 @@ export interface AutofillMeta {
   previewHtml: string | null;
   /** 이미지 원본 미리보기용 data URL (source==='image' 일 때) */
   imageDataUrl: string | null;
-  /** PDF 원본 미리보기용 data URL (source==='pdf' 일 때; 브라우저가 iframe 으로 그대로 렌더링) */
+  /**
+   * PDF 원본 미리보기용 object URL (source==='pdf' 일 때; 브라우저가 iframe 으로
+   * 그대로 렌더링). data: URL 은 브라우저에 따라 iframe 안에서 막히는 경우가
+   * 있어 URL.createObjectURL 로 만든 blob: URL 을 쓴다.
+   */
   pdfDataUrl: string | null;
   fileName: string;
 }
@@ -42,6 +46,7 @@ export function AutofillPanel({
   const [err, setErr] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pdfObjectUrlRef = useRef<string | null>(null);
 
   async function handleFile(file: File) {
     setErr(null);
@@ -53,7 +58,10 @@ export function AutofillPanel({
         file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
       const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
       const imageDataUrl = isImage ? await readAsDataUrl(file) : null;
-      const pdfDataUrl = isPdf ? await readAsDataUrl(file) : null;
+      // 이전 미리보기 URL 이 있으면 해제하고 새로 만든다(메모리 누수 방지).
+      if (pdfObjectUrlRef.current) URL.revokeObjectURL(pdfObjectUrlRef.current);
+      const pdfDataUrl = isPdf ? URL.createObjectURL(file) : null;
+      pdfObjectUrlRef.current = pdfDataUrl;
 
       const fd = new FormData();
       fd.set("kind", kind);
