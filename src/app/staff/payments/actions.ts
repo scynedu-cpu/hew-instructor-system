@@ -18,6 +18,7 @@ export async function setRate(
   const rate = Number(formData.get("rate"));
   const effectiveFrom = String(formData.get("effective_from") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  const programId = String(formData.get("program_id") ?? "").trim() || null;
 
   if (!Number.isFinite(rate) || rate < 0) {
     return { error: "단가를 올바르게 입력하세요." };
@@ -28,6 +29,7 @@ export async function setRate(
   const { error } = await supabase.from("payment_rate_settings").insert({
     rate,
     effective_from: effectiveFrom,
+    program_id: programId,
     note: note || null,
     created_by: account.display_name ?? "담당자",
   });
@@ -75,6 +77,8 @@ export interface PreviewRow {
   instructor_id: string;
   instructor_name: string;
   quantity: number;
+  total_hours: number;
+  estimated_amount: number;
 }
 
 export async function previewSettle(
@@ -92,13 +96,21 @@ export async function previewSettle(
   });
   if (error) return { error: error.message };
 
-  const rows = ((data ?? []) as { instructor_id: string; instructor_name: string; quantity: number }[]).map(
-    (r) => ({
-      instructor_id: r.instructor_id,
-      instructor_name: r.instructor_name,
-      quantity: Number(r.quantity),
-    }),
-  );
+  const rows = (
+    (data ?? []) as {
+      instructor_id: string;
+      instructor_name: string;
+      quantity: number;
+      total_hours: number | string | null;
+      estimated_amount: number | string | null;
+    }[]
+  ).map((r) => ({
+    instructor_id: r.instructor_id,
+    instructor_name: r.instructor_name,
+    quantity: Number(r.quantity),
+    total_hours: Number(r.total_hours ?? 0),
+    estimated_amount: Number(r.estimated_amount ?? 0),
+  }));
   return { rows };
 }
 

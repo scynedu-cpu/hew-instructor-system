@@ -36,11 +36,14 @@ export default async function PaymentDetailPage({
 
   const { data: items } = await supabase
     .from("payment_items")
-    .select("lecture_confirmation_id")
+    .select("lecture_confirmation_id, hours, rate, amount")
     .eq("payment_id", id)
-    .returns<{ lecture_confirmation_id: string }[]>();
+    .returns<
+      { lecture_confirmation_id: string; hours: number | null; rate: number | null; amount: number | null }[]
+    >();
 
-  const lcIds = (items ?? []).map((i) => i.lecture_confirmation_id);
+  const itemByLcId = new Map((items ?? []).map((i) => [i.lecture_confirmation_id, i]));
+  const lcIds = [...itemByLcId.keys()];
 
   let lectures: LectureRow[] = [];
   if (lcIds.length > 0) {
@@ -85,7 +88,13 @@ export default async function PaymentDetailPage({
           {payment.period_start} ~ {payment.period_end}
         </Field>
         <Field label="강의 건수">{payment.quantity}건</Field>
-        <Field label="적용 단가">{won(payment.rate)}</Field>
+        <Field label="적용 단가">
+          {payment.rate == null ? (
+            <span className="text-muted">프로그램별 상이(아래 참고)</span>
+          ) : (
+            won(payment.rate)
+          )}
+        </Field>
         <Field label="정산 금액">
           <span className="font-bold">{won(payment.amount)}</span>
         </Field>
@@ -126,23 +135,36 @@ export default async function PaymentDetailPage({
                 <th className="px-3 py-2 font-medium">학교</th>
                 <th className="px-3 py-2 font-medium">프로그램</th>
                 <th className="px-3 py-2 font-medium">시수</th>
+                <th className="px-3 py-2 font-medium">단가</th>
+                <th className="px-3 py-2 font-medium">금액</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {lectures.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-3 py-2">{l.actual_date ?? "-"}</td>
-                  <td className="px-3 py-2">
-                    {l.assignment?.session?.school?.name ?? "-"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {l.assignment?.session?.program?.name ?? "-"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {l.actual_hours != null ? `${l.actual_hours}시간` : "-"}
-                  </td>
-                </tr>
-              ))}
+              {lectures.map((l) => {
+                const item = itemByLcId.get(l.id);
+                return (
+                  <tr key={l.id}>
+                    <td className="px-3 py-2">{l.actual_date ?? "-"}</td>
+                    <td className="px-3 py-2">
+                      {l.assignment?.session?.school?.name ?? "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.assignment?.session?.program?.name ?? "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {(item?.hours ?? l.actual_hours) != null
+                        ? `${item?.hours ?? l.actual_hours}시간`
+                        : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {item?.rate != null ? `${won(item.rate)}/시간` : "-"}
+                    </td>
+                    <td className="px-3 py-2 font-medium tabular-nums">
+                      {item?.amount != null ? won(item.amount) : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

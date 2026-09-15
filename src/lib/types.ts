@@ -333,11 +333,16 @@ export function conflictReasonText(conflicts: TimeConflict[]): string {
 
 export interface PaymentRateSetting {
   id: string;
-  rate: number;
+  rate: number; // 시간당 단가(원/시간)
   effective_from: string;
+  program_id: string | null; // NULL = 그 외 모든 프로그램에 적용되는 기본 단가
   note: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface PaymentRateSettingWithProgram extends PaymentRateSetting {
+  program: { id: string; name: string } | null;
 }
 
 export type PaymentStatus = "pending" | "paid";
@@ -348,7 +353,8 @@ export interface Payment {
   period_start: string;
   period_end: string;
   quantity: number;
-  rate: number;
+  /** (구) 건당 단일단가 스냅샷 — 시간당·프로그램별 단가 도입 이전 정산만 값이 있음 */
+  rate: number | null;
   amount: number;
   payment_status: PaymentStatus;
   settled_by: string | null;
@@ -363,13 +369,16 @@ export interface PaymentWithInstructor extends Payment {
   instructor: Pick<Instructor, "id" | "name"> | null;
 }
 
-/** 정산 상세: 포함된 개별 강의 */
+/** 정산 상세: 포함된 개별 강의 — hours/rate/amount 는 시간당 단가 도입 이전
+ *  정산이면 null(payment_items 에 스냅샷이 없음) */
 export interface PaymentLectureItem {
   lecture_confirmation_id: string;
   actual_date: string | null;
   actual_hours: number | null;
   school_name: string;
   program_name: string;
+  rate: number | null;
+  amount: number | null;
 }
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {

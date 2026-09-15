@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { won } from "@/lib/format";
 import {
   settlePeriod,
   previewSettle,
@@ -43,6 +44,7 @@ export function SettleForm({ hasRate }: { hasRate: boolean }) {
   }
 
   const totalQty = (preview ?? []).reduce((s, r) => s + r.quantity, 0);
+  const totalAmount = (preview ?? []).reduce((s, r) => s + r.estimated_amount, 0);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
@@ -108,12 +110,14 @@ export function SettleForm({ hasRate }: { hasRate: boolean }) {
           ) : (
             <>
               <p className="mb-1 font-medium">
-                정산 대상: {preview.length}명 / 총 {totalQty}건
+                정산 대상: {preview.length}명 / 총 {totalQty}건 · 예상 총액{" "}
+                {won(totalAmount)}
               </p>
               <ul className="flex flex-col gap-0.5 text-muted">
                 {preview.map((r) => (
                   <li key={r.instructor_id}>
-                    · {r.instructor_name} — {r.quantity}건
+                    · {r.instructor_name} — {r.quantity}건 · {r.total_hours}시간
+                    · 예상 {won(r.estimated_amount)}
                   </li>
                 ))}
               </ul>

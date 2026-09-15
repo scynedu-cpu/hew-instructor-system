@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { PaymentRateSetting, PaymentWithInstructor } from "@/lib/types";
+import type {
+  PaymentRateSettingWithProgram,
+  PaymentWithInstructor,
+} from "@/lib/types";
 import { PAYMENT_STATUS_LABEL } from "@/lib/types";
 import { won } from "@/lib/format";
 import { RateManager } from "./rate-manager";
@@ -12,15 +15,20 @@ export default async function PaymentsPage() {
   await requireRole("staff");
   const supabase = await createClient();
 
-  const [{ data: currentRate }, { data: rateHistory }, { data: payments }] =
+  const [{ data: defaultRate }, { data: rateHistory }, { data: programs }, { data: payments }] =
     await Promise.all([
-      supabase.rpc("current_payment_rate"),
+      supabase.rpc("current_payment_rate", { p_program_id: null }),
       supabase
         .from("payment_rate_settings")
-        .select("*")
+        .select("*, program:programs(id,name)")
         .order("effective_from", { ascending: false })
         .order("created_at", { ascending: false })
-        .returns<PaymentRateSetting[]>(),
+        .returns<PaymentRateSettingWithProgram[]>(),
+      supabase
+        .from("programs")
+        .select("id,name")
+        .eq("is_active", true)
+        .order("name"),
       supabase
         .from("payments")
         .select("*, instructor:instructors(id,name)")
@@ -28,7 +36,7 @@ export default async function PaymentsPage() {
         .returns<PaymentWithInstructor[]>(),
     ]);
 
-  const rate = typeof currentRate === "number" ? currentRate : null;
+  const rate = typeof defaultRate === "number" ? defaultRate : null;
   const list = payments ?? [];
 
   return (
@@ -36,8 +44,9 @@ export default async function PaymentsPage() {
       <h1 className="text-xl font-bold">강사료 정산</h1>
 
       <RateManager
-        currentRate={rate}
+        defaultRate={rate}
         history={rateHistory ?? []}
+        programs={programs ?? []}
       />
 
       <SettleForm hasRate={rate !== null} />
@@ -74,7 +83,13 @@ export default async function PaymentsPage() {
                       {p.period_start} ~ {p.period_end}
                     </td>
                     <td className="px-3 py-2">{p.quantity}건</td>
-                    <td className="px-3 py-2 text-xs">{won(p.rate)}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {p.rate == null ? (
+                        <span className="text-muted">프로그램별 상이</span>
+                      ) : (
+                        won(p.rate)
+                      )}
+                    </td>
                     <td className="px-3 py-2 font-semibold tabular-nums">
                       {won(p.amount)}
                     </td>
