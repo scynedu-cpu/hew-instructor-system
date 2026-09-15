@@ -5,7 +5,10 @@ import type { SessionRequestWithRefs } from "@/lib/types";
 import { programLabel } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 
-export default async function SchoolRequestsPage() {
+export default async function SchoolRequestsPage({
+  searchParams,
+}: PageProps<"/school">) {
+  const { approved } = await searchParams;
   const ctx = await getSchoolContext();
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -32,6 +35,12 @@ export default async function SchoolRequestsPage() {
           </Link>
         )}
       </div>
+
+      {approved && (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          신청이 접수되어 바로 수업 일정에 반영되었습니다. 강사 배정이 이어서 진행됩니다.
+        </p>
+      )}
 
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">

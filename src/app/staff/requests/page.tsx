@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { RequestStatus, SessionRequestWithRefs } from "@/lib/types";
 import { REQUEST_STATUS_LABEL, programLabel } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
+import { collectPrimaryDates, findScheduleOverlaps, type ScheduleOverlapMatch } from "@/lib/schedule-overlap";
 
 const FILTERS: { key: RequestStatus | "all"; label: string }[] = [
   { key: "all", label: "전체" },
@@ -15,7 +16,7 @@ const FILTERS: { key: RequestStatus | "all"; label: string }[] = [
 export default async function StaffRequestsPage({
   searchParams,
 }: PageProps<"/staff/requests">) {
-  const { status, proxy } = await searchParams;
+  const { status, proxy, approved } = await searchParams;
   const active = (
     FILTERS.some((f) => f.key === status) ? status : "all"
   ) as RequestStatus | "all";
@@ -33,6 +34,18 @@ export default async function StaffRequestsPage({
   const { data, error } = await query.returns<SessionRequestWithRefs[]>();
   const requests = data ?? [];
 
+  // 대기중(제출됨/검토중) 건마다 "다른 학교와 일정이 겹치는지" 실시간으로 다시
+  // 계산해 배지로 보여준다 — 제출 직후 자동승인되지 않고 남아있는 건은 대부분
+  // 이 겹침 때문이므로, 담당자가 목록만 보고도 이유를 바로 알 수 있게 한다.
+  const overlapsByRequest = new Map<string, ScheduleOverlapMatch[]>();
+  for (const r of requests) {
+    if (r.request_status !== "submitted" && r.request_status !== "reviewing") continue;
+    const { allDatesKnown, dates } = collectPrimaryDates(r.session_request_items ?? []);
+    if (!allDatesKnown) continue;
+    const overlaps = await findScheduleOverlaps(supabase, r.school_id, dates);
+    if (overlaps.length > 0) overlapsByRequest.set(r.id, overlaps);
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -47,7 +60,10 @@ export default async function StaffRequestsPage({
 
       {proxy && (
         <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          대리입력한 신청서를 저장했습니다. 아래 목록에서 검토·승인하세요.
+          대리입력한 신청서를 저장했습니다.{" "}
+          {approved
+            ? "다른 학교 일정과 겹치지 않아 바로 승인되어 수업 일정에 반영되었습니다."
+            : "아래 목록에서 검토·승인하세요."}
         </p>
       )}
 
@@ -101,7 +117,20 @@ export default async function StaffRequestsPage({
               {requests.map((r) => (
                 <tr key={r.id} className="hover:bg-zinc-50/60">
                   <td className="px-3 py-2">
-                    <StatusBadge status={r.request_status} />
+                    <div className="flex items-center gap-1.5">
+                      <StatusBadge status={r.request_status} />
+                      {overlapsByRequest.has(r.id) && (
+                        <span
+                          className="badge bg-amber-50 text-amber-800"
+                          title={overlapsByRequest
+                            .get(r.id)!
+                            .map((o) => `${o.date} · ${o.schoolName} · ${o.programLabel}`)
+                            .join("\n")}
+                        >
+                          ⚠ 일정 겹침
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     {r.school?.name ?? "-"}

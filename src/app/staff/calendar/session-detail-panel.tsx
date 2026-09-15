@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CalendarSession,
@@ -318,7 +319,22 @@ export function SessionDetailPanel({
               </button>
             </section>
 
-            {/* 강사 교체 */}
+            {/* 강사 교체/배정 — 작업지시서 #019: 자동승인으로 생긴 미배정
+                세션은 아직 assignments 행 자체가 없어 swap RPC 가 동작하지
+                않으므로, 여기선 "교체" 대신 배정 화면으로 안내한다. */}
+            {!session.instructor_id ? (
+              <section className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+                <p className="font-semibold text-red-800">
+                  아직 강사가 배정되지 않았습니다.
+                </p>
+                <Link
+                  href={`/staff/assignments/${session.id}`}
+                  className="self-start rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
+                >
+                  배정하러 가기 →
+                </Link>
+              </section>
+            ) : (
             <section className="flex flex-col gap-2">
               <h3 className="text-sm font-semibold">강사 교체</h3>
               <input
@@ -374,6 +390,7 @@ export function SessionDetailPanel({
                 강사 교체
               </button>
             </section>
+            )}
           </>
         )}
 

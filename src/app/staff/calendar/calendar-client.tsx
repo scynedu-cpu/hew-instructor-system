@@ -28,6 +28,8 @@ function statusClasses(s: CalendarSession) {
     return "border-l-4 border-zinc-400 bg-zinc-100 text-zinc-600";
   if (s.session_status === "confirmed")
     return "border-l-4 border-green-500 bg-green-50 text-green-900";
+  if (s.session_status === "unassigned")
+    return "border-l-4 border-red-400 bg-red-50 text-red-900";
   return "border-l-4 border-amber-400 bg-amber-50 text-amber-900";
 }
 
@@ -205,6 +207,10 @@ export function CalendarClient({
           임시배정
         </span>
         <span>
+          <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-red-400" />
+          강사 미배정
+        </span>
+        <span>
           <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-zinc-400" />
           강의완료
         </span>
@@ -288,6 +294,11 @@ export function CalendarClient({
                       {completed && (
                         <span className="rounded bg-zinc-300 px-1 py-0.5 text-[10px] font-medium text-zinc-700">
                           강의완료
+                        </span>
+                      )}
+                      {s.session_status === "unassigned" && (
+                        <span className="rounded bg-red-200 px-1 py-0.5 text-[10px] font-medium text-red-800">
+                          배정 필요
                         </span>
                       )}
                     </div>

@@ -59,7 +59,9 @@ export default async function StaffCalendarPage({
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
-        .in("session_status", ["provisional", "confirmed", "completed"])
+        // 'unassigned' 포함 — 학교 신청 자동승인(#019)으로 강사 배정 전에도
+        // 예정일이 잡힌 세션이 바로 생길 수 있어, 캘린더에도 즉시 노출한다.
+        .in("session_status", ["unassigned", "provisional", "confirmed", "completed"])
         .returns<Row[]>(),
       supabase
         .from("instructors")

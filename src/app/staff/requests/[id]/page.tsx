@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { SessionRequestWithRefs } from "@/lib/types";
 import { programLabel, SESSION_STATUS_LABEL } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  AUTO_APPROVE_REVIEWER,
+  collectPrimaryDates,
+  findScheduleOverlaps,
+} from "@/lib/schedule-overlap";
 import { ReviewPanel } from "./review-panel";
 
 type SessionRow = {
@@ -40,6 +45,16 @@ export default async function StaffRequestDetailPage({
   const sessions = r.class_sessions ?? [];
   const isPending =
     r.request_status === "submitted" || r.request_status === "reviewing";
+  const isAutoApproved =
+    r.request_status === "approved" && r.reviewed_by === AUTO_APPROVE_REVIEWER;
+
+  const overlaps = isPending
+    ? await (async () => {
+        const { allDatesKnown, dates } = collectPrimaryDates(items);
+        if (!allDatesKnown) return [];
+        return findScheduleOverlaps(supabase, r.school_id, dates);
+      })()
+    : [];
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -118,6 +133,24 @@ export default async function StaffRequestDetailPage({
         </ul>
       </div>
 
+      {isPending && overlaps.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">
+            ⚠ 다른 학교 일정과 겹쳐 자동승인되지 않았습니다
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {overlaps.map((o, i) => (
+              <li key={i}>
+                · {o.date} — {o.schoolName} · {o.programLabel}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-700">
+            내용을 확인한 뒤 그대로 승인하거나 반려하세요.
+          </p>
+        </div>
+      )}
+
       {r.request_status === "rejected" && (
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
           <span className="font-semibold">반려 사유:</span>{" "}
@@ -128,7 +161,9 @@ export default async function StaffRequestDetailPage({
       {r.request_status === "approved" && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm">
           <p className="font-semibold text-green-800">
-            승인됨 — 수업 일정 {sessions.length}건 생성 완료
+            {isAutoApproved
+              ? `자동승인됨(다른 학교 일정과 겹치지 않음) — 수업 일정 ${sessions.length}건 생성 완료`
+              : `승인됨 — 수업 일정 ${sessions.length}건 생성 완료`}
           </p>
           <ul className="mt-2 flex flex-col gap-1 text-green-900">
             {sessions.map((s) => {

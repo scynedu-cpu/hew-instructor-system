@@ -33,5 +33,5 @@ export async function submitProxyRequest(
   if (res.error) return { error: res.error };
 
   revalidatePath("/staff/requests");
-  redirect("/staff/requests?proxy=1");
+  redirect(`/staff/requests?proxy=1${res.autoApproved ? "&approved=1" : ""}`);
 }
