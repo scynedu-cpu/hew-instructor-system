@@ -18,8 +18,9 @@ import type { QuestionAverage, SurveyGroupCode } from "@/lib/types";
 import { getQuestionAverages } from "./actions";
 import type { RefGroup } from "./insights-client";
 import { DateRangeFilter } from "./date-range-filter";
+import { CylinderBar, type CylinderBarProps } from "./cylinder-bar";
 
-const BRAND = "#1e2a44";
+const BRAND = "#2563eb";
 const LOWEST = "#dc2626";
 
 function QuestionBarChart({ rows }: { rows: QuestionAverage[] }) {
@@ -37,7 +38,7 @@ function QuestionBarChart({ rows }: { rows: QuestionAverage[] }) {
   return (
     <div className="flex flex-col gap-3">
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+        <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }} barCategoryGap="30%">
           <CartesianGrid vertical={false} stroke="#eef0f3" />
           <XAxis dataKey="label" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
           <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -47,7 +48,11 @@ function QuestionBarChart({ rows }: { rows: QuestionAverage[] }) {
               p?.payload?.text,
             ]}
           />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          <Bar
+            dataKey="value"
+            isAnimationActive={false}
+            shape={(props) => <CylinderBar {...(props as unknown as CylinderBarProps)} />}
+          >
             {chartData.map((r, i) => (
               <Cell key={i} fill={minAvg !== null && r.avg === minAvg ? LOWEST : BRAND} />
             ))}
