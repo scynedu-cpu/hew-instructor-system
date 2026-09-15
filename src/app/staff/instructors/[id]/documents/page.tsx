@@ -46,7 +46,7 @@ export default async function InstructorProxyDocumentsPage({
           </form>
         </div>
         <p className="mt-1 text-sm text-muted">
-          서류 종류별로 파일을 업로드하세요. 성범죄경력조회동의서(1년)·이력서(3년)는
+          서류 종류별로 파일을 업로드하세요. 성범죄경력조회동의서(1년)·강사카드(3년)는
           발급일 기준으로 만료일이 자동 계산되고, 만료 30일 전부터 “임박”으로
           표시됩니다.
         </p>

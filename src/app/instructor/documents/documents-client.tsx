@@ -7,6 +7,7 @@ import {
   DOC_TYPES,
   computeStatus,
   hasExpiry,
+  validityYears,
   type DocType,
 } from "@/lib/documents";
 import { uploadDocument, deleteDocument } from "./actions";
@@ -98,7 +99,7 @@ function DocRow({
         <span className="font-medium">{docType}</span>
         {hasExpiry(docType) && (
           <span className="text-xs text-muted">
-            (유효기간 {docType === "이력서" ? "3년" : "1년"})
+            (유효기간 {validityYears(docType)}년)
           </span>
         )}
 

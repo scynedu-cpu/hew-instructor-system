@@ -1,5 +1,6 @@
 // 제출 서류 종류 / 만료·상태 계산 (SQL 헬퍼 instructor_doc_expiry / instructor_doc_status 와 동일 규칙)
 
+// 이력서는 강사카드와 동일한 서류라 별도 항목으로 두지 않는다(고객 확인).
 export const DOC_TYPES = [
   "강사카드",
   "개인정보동의서",
@@ -7,7 +8,6 @@ export const DOC_TYPES = [
   "통장사본",
   "결격조회동의서",
   "성범죄경력조회동의서",
-  "이력서",
 ] as const;
 
 export type DocType = (typeof DOC_TYPES)[number];
@@ -17,11 +17,16 @@ export type DocStatus = "valid" | "expiring_soon" | "expired";
 /** 서류별 유효기간(년). 없으면 만료 없음. */
 const VALIDITY_YEARS: Partial<Record<DocType, number>> = {
   성범죄경력조회동의서: 1,
-  이력서: 3,
+  강사카드: 3,
 };
 
 export function hasExpiry(docType: DocType): boolean {
   return docType in VALIDITY_YEARS;
+}
+
+/** 서류별 유효기간(년). 만료 없는 서류면 null. */
+export function validityYears(docType: DocType): number | null {
+  return VALIDITY_YEARS[docType] ?? null;
 }
 
 /**
