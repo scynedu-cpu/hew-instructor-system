@@ -109,20 +109,50 @@ export function ProxyRequestForm({
     const seen = new Set<string>();
     for (const ri of rawItems) {
       const prog = matchProgram(String(ri.program_name ?? ""));
-      if (!prog || seen.has(prog.id)) continue;
-      seen.add(prog.id);
+      if (!prog) continue;
       const dates = Array.isArray(ri.requested_dates)
         ? (ri.requested_dates as unknown[])
             .map((d) => String(d).trim())
             .filter((d) => DATE_RE.test(d))
         : [];
+      const noteText = String(ri.note ?? "").trim();
+      // "총 O회"처럼 반복 횟수가 날짜 개수와 맞아떨어지면, AI가 repeat_all_dates
+      // 플래그를 놓쳤어도 반복형으로 간주한다(모델 출력에만 의존하지 않는 안전장치).
+      const repeatCountMatch = noteText.match(/총\s*(\d+)\s*회/);
+      const isRepeating =
+        dates.length > 1 &&
+        (ri.repeat_all_dates === true ||
+          (repeatCountMatch && Number(repeatCountMatch[1]) === dates.length));
+
+      if (isRepeating) {
+        // 반복 운영 — 같은 프로그램을 날짜별로 별도 항목(=별도 수업)으로 분리.
+        // 승인 시 한 항목당 수업 1개가 생성되므로, 날짜를 하나로 묶어두면
+        // 나머지 회차가 통째로 유실된다.
+        for (const date of dates) {
+          const key = `${prog.id}::${date}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          mapped.push({
+            ...emptyItem(prog.id),
+            requested_dates: [date],
+            dates_tbd: false,
+            preferred_time_slot: String(ri.preferred_time_slot ?? "").trim(),
+            expected_student_count: String(ri.expected_student_count ?? "").trim(),
+            note: noteText,
+          });
+        }
+        continue;
+      }
+
+      if (seen.has(prog.id)) continue;
+      seen.add(prog.id);
       mapped.push({
         ...emptyItem(prog.id),
         requested_dates: dates.length ? dates : [""],
         dates_tbd: !!ri.dates_tbd || (dates.length === 0 && !!ri.dates_tbd),
         preferred_time_slot: String(ri.preferred_time_slot ?? "").trim(),
         expected_student_count: String(ri.expected_student_count ?? "").trim(),
-        note: String(ri.note ?? "").trim(),
+        note: noteText,
       });
     }
     if (mapped.length) setItems(mapped);

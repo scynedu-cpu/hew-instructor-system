@@ -46,9 +46,10 @@ const SCHEMA: Record<AutofillKind, string> = {
       "program_name": string|null,          // 프로그램명 (대분류 또는 세부항목, 예: "현장직업체험 로봇공학자", "직업인특강")
       "requested_dates": string[]|null,     // 희망일자 "YYYY-MM-DD" 배열
       "dates_tbd": boolean,                 // 일자 미정이면 true
+      "repeat_all_dates": boolean,           // true면 requested_dates 의 각 날짜가 별도 회차(반복 운영) — "총 O회"처럼 여러 번 진행됨이 문서에 명시된 경우. 학교가 아직 날짜를 못 정해 후보 날짜만 여러 개 적은 경우는 false
       "preferred_time_slot": string|null,   // 시간대 (예: "3,4교시", "10:00~12:00")
       "expected_student_count": string|null,// 인원 (예: "90명", "4학급")
-      "note": string|null                   // 비고
+      "note": string|null                   // 비고 — "총 O회" 등 반복 횟수가 적혀 있으면 그대로 포함
     }
   ]|null
 }`,
@@ -66,7 +67,7 @@ const SCHEMA: Record<AutofillKind, string> = {
 };
 
 function buildSystem(kind: AutofillKind): string {
-  return [
+  const lines = [
     "너는 한국의 교육지원센터 담당자를 돕는 문서 정보 추출기다.",
     "입력으로 받은 문서(또는 사진/스캔)에서 아래 JSON 스키마의 각 필드 값을 추출한다.",
     "",
@@ -76,10 +77,22 @@ function buildSystem(kind: AutofillKind): string {
     "- 날짜는 'YYYY-MM-DD'. 연도가 없으면 문맥상 올해로 추정하되 애매하면 null.",
     "- 주민등록번호, 여권번호, 계좌번호, 카드번호 등 민감정보는 절대 추출하지 말 것(스키마에도 없음).",
     "- 표/서식이 섞여 있어도 의미 기준으로 값을 뽑는다.",
-    "",
-    "JSON 스키마:",
-    SCHEMA[kind],
-  ].join("\n");
+    "- 병합된 셀이 있는 표(예: 하나의 대분류 아래 여러 세부 항목이 나열된 표)는 각",
+    "  행의 날짜·시간·인원 값이 실제로 어느 세부 항목 행에 속하는지 줄 단위로",
+    "  주의해서 맞춰라. 값이 비어 있는 세부 항목은 신청되지 않은 것이므로 items 에",
+    "  포함하지 않는다.",
+  ];
+  if (kind === "school-request") {
+    lines.push(
+      "- 한 프로그램에 날짜가 여러 개 적혀 있을 때 두 가지 경우를 구분한다:",
+      "  (1) 반복 운영 — '총 O회', '월 1회', '회차'처럼 같은 프로그램을 여러 날짜에",
+      "      걸쳐 각각 진행한다고 문서에 명시된 경우 → repeat_all_dates: true.",
+      "  (2) 후보 일자 — 아직 날짜가 확정되지 않아 가능한 날짜 후보만 여러 개 적은",
+      "      경우(반복 횟수 언급 없음) → repeat_all_dates: false 또는 생략.",
+    );
+  }
+  lines.push("", "JSON 스키마:", SCHEMA[kind]);
+  return lines.join("\n");
 }
 
 function parseJsonObject(raw: string): Record<string, unknown> {
