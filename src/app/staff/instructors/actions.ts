@@ -62,6 +62,35 @@ export interface NewProfileState {
   error?: string;
 }
 
+function normalizePhone(v: string): string {
+  return v.replace(/\D/g, "");
+}
+
+/**
+ * 동일 인물 중복 등록 방지 — 휴대전화(숫자만 비교)나 이메일이 기존 강사와
+ * 같으면 그 강사 정보를 반환한다(둘 다 비어있으면 검사하지 않음).
+ * "윤천호" 중복 등록 사례(같은 사람을 대리입력으로 2번 저장) 재발 방지용.
+ */
+async function findDuplicateInstructor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  { mobile, email }: { mobile?: string | null; email?: string | null },
+): Promise<{ id: string; name: string } | null> {
+  const mobileDigits = mobile ? normalizePhone(mobile) : "";
+  const emailNorm = email?.trim().toLowerCase() || "";
+  if (!mobileDigits && !emailNorm) return null;
+
+  const { data } = await supabase.from("instructors").select("id,name,mobile_phone,email");
+  for (const row of data ?? []) {
+    if (mobileDigits && row.mobile_phone && normalizePhone(row.mobile_phone) === mobileDigits) {
+      return { id: row.id, name: row.name };
+    }
+    if (emailNorm && row.email && row.email.trim().toLowerCase() === emailNorm) {
+      return { id: row.id, name: row.name };
+    }
+  }
+  return null;
+}
+
 /** 계정·초대 없이 강사 프로필(instructors row)만 생성 → 바로 대리입력 편집으로 */
 export async function createInstructorProfile(
   _prev: NewProfileState,
@@ -74,6 +103,14 @@ export async function createInstructorProfile(
   if (!name) return { error: "성명을 입력하세요." };
 
   const supabase = await createClient();
+
+  const dup = await findDuplicateInstructor(supabase, { mobile, email });
+  if (dup) {
+    return {
+      error: `이미 등록된 강사와 연락처/이메일이 같습니다: "${dup.name}". 새로 만들지 말고 강사 목록에서 그 강사를 수정하세요.`,
+    };
+  }
+
   const { data, error } = await supabase
     .from("instructors")
     .insert({
@@ -289,6 +326,16 @@ export async function createInstructorProfileFull(
   if (!name) return { error: "성명은 필수입니다." };
 
   const supabase = await createClient();
+
+  const dup = await findDuplicateInstructor(supabase, {
+    mobile: payload.mobile_phone,
+    email: payload.email,
+  });
+  if (dup) {
+    return {
+      error: `이미 등록된 강사와 연락처/이메일이 같습니다: "${dup.name}". 새로 만들지 말고 강사 목록에서 그 강사를 수정하세요.`,
+    };
+  }
 
   const { data, error: insErr } = await supabase
     .from("instructors")
