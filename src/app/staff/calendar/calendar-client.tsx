@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import type {
   CalendarSession,
   InstructorWithSpecialties,
+  PendingCalendarItem,
   TimeConflict,
 } from "@/lib/types";
-import { conflictReasonText } from "@/lib/types";
+import { conflictReasonText, REQUEST_STATUS_LABEL } from "@/lib/types";
 import {
   WEEKDAY_KR,
   dayOfMonth,
@@ -40,6 +41,7 @@ export function CalendarClient({
   anchor,
   days,
   sessions,
+  pendingItems,
   instructors,
   initialSelectedId = null,
 }: {
@@ -49,6 +51,7 @@ export function CalendarClient({
   anchor: string;
   days: string[];
   sessions: CalendarSession[];
+  pendingItems: PendingCalendarItem[];
   instructors: InstructorWithSpecialties[];
   /** 작업지시서 #018 — 운영 대시보드에서 특정 세션 상세를 바로 열기 위한 딥링크 */
   initialSelectedId?: string | null;
@@ -58,6 +61,7 @@ export function CalendarClient({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
+  const [selectedPendingId, setSelectedPendingId] = useState<string | null>(null);
   const [pending, setPending] = useState<{
     sessionId: string;
     targetDate: string;
@@ -73,6 +77,28 @@ export function CalendarClient({
     arr.push(s);
     byDate.set(s.scheduled_date, arr);
   }
+  const pendingByDate = new Map<string, PendingCalendarItem[]>();
+  for (const p of pendingItems) {
+    const arr = pendingByDate.get(p.scheduled_date) ?? [];
+    arr.push(p);
+    pendingByDate.set(p.scheduled_date, arr);
+  }
+  // 검토대기 항목이 같은 날짜의 "다른 학교" 일정(승인된 세션이든 다른 검토대기
+  // 항목이든)과 겹치면 경고 표시 — 담당자가 승인 전에 캘린더에서 바로 확인 가능.
+  function otherSchoolEntriesOnDate(date: string, schoolId: string) {
+    const approved = (byDate.get(date) ?? [])
+      .filter((s) => s.session_status !== "completed" && s.school_id !== schoolId)
+      .map((s) => `${s.school_name} · ${s.program_name} (승인됨)`);
+    const otherPending = (pendingByDate.get(date) ?? [])
+      .filter((p) => p.school_id !== schoolId)
+      .map((p) => `${p.school_name} · ${p.program_name} (검토대기)`);
+    return [...approved, ...otherPending];
+  }
+  function hasOtherSchoolOnDate(date: string, schoolId: string): boolean {
+    return otherSchoolEntriesOnDate(date, schoolId).length > 0;
+  }
+  const selectedPending =
+    pendingItems.find((p) => p.itemId === selectedPendingId) ?? null;
 
   const p = prevMonth(year, month);
   const n = nextMonth(year, month);
@@ -214,6 +240,10 @@ export function CalendarClient({
           <span className="mr-1 inline-block h-2 w-2 rounded-sm bg-zinc-400" />
           강의완료
         </span>
+        <span>
+          <span className="mr-1 inline-block h-2 w-2 rounded-sm border border-dashed border-violet-400 bg-violet-50" />
+          검토대기(미승인 신청)
+        </span>
         <span>카드를 다른 날짜 칸으로 드래그하면 일정이 이동합니다. (강의완료 세션은 변경할 수 없습니다)</span>
       </div>
 
@@ -310,6 +340,33 @@ export function CalendarClient({
                   </button>
                 );
               })}
+              {(pendingByDate.get(date) ?? []).map((p) => {
+                const overlap = hasOtherSchoolOnDate(date, p.school_id);
+                return (
+                  <button
+                    key={p.itemId}
+                    type="button"
+                    onClick={() => setSelectedPendingId(p.itemId)}
+                    className="rounded border border-dashed border-violet-400 bg-violet-50 px-1.5 py-1 text-left text-violet-900"
+                  >
+                    <div className="flex items-center gap-1 font-semibold leading-tight">
+                      <span>{p.school_name}</span>
+                      <span className="rounded bg-violet-200 px-1 py-0.5 text-[10px] font-medium text-violet-800">
+                        검토대기
+                      </span>
+                      {overlap && (
+                        <span className="rounded bg-amber-200 px-1 py-0.5 text-[10px] font-medium text-amber-900">
+                          ⚠ 겹침
+                        </span>
+                      )}
+                    </div>
+                    <div className="leading-tight">{p.program_name}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px] opacity-80">
+                      {p.time_slot && <span>{p.time_slot}</span>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           );
         })}
@@ -345,6 +402,98 @@ export function CalendarClient({
           }}
         />
       )}
+
+      {selectedPending && (
+        <PendingItemPopover
+          item={selectedPending}
+          overlaps={otherSchoolEntriesOnDate(
+            selectedPending.scheduled_date,
+            selectedPending.school_id,
+          )}
+          onClose={() => setSelectedPendingId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PendingItemPopover({
+  item,
+  overlaps,
+  onClose,
+}: {
+  item: PendingCalendarItem;
+  overlaps: string[];
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-sm font-bold text-violet-800">
+            🕓 검토대기 — {item.school_name}
+          </h3>
+          <span className="badge bg-violet-100 text-violet-800">
+            {REQUEST_STATUS_LABEL[item.request_status]}
+          </span>
+        </div>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
+          <dt className="text-muted">프로그램</dt>
+          <dd>{item.program_name}</dd>
+          <dt className="text-muted">희망일자</dt>
+          <dd>
+            {item.scheduled_date}
+            {item.time_slot ? ` · ${item.time_slot}` : ""}
+          </dd>
+          {item.student_count && (
+            <>
+              <dt className="text-muted">인원</dt>
+              <dd>{item.student_count}</dd>
+            </>
+          )}
+          {item.note && (
+            <>
+              <dt className="text-muted">비고</dt>
+              <dd>{item.note}</dd>
+            </>
+          )}
+        </dl>
+        {overlaps.length > 0 && (
+          <div className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="mb-1 font-semibold">⚠ 같은 날짜 다른 학교 일정</p>
+            <ul>
+              {overlaps.map((o) => (
+                <li key={o}>· {o}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="text-xs text-muted">
+          아직 승인 전이라 캘린더에 참고용으로만 표시됩니다. 승인·반려는 신청
+          관리 화면에서 처리하세요.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-zinc-50"
+          >
+            닫기
+          </button>
+          <Link
+            href={`/staff/requests/${item.requestId}`}
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover"
+          >
+            신청 상세 보기
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

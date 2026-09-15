@@ -265,11 +265,31 @@ export interface CalendarSession {
   scheduled_date: string;
   time_slot: string | null;
   session_status: SessionStatus;
+  school_id: string | null;
   school_name: string;
   program_name: string;
   instructor_id: string | null;
   instructor_name: string | null;
   assignment_type: AssignmentType | null;
+}
+
+/**
+ * 캘린더 카드용: 아직 승인 안 된(제출됨/검토중) 신청서의 항목 — 담당자가
+ * 승인하기 전에 같은 날짜 다른 학교 일정과 겹치는지 미리 볼 수 있게 표시.
+ * 희망일자가 여러 개면 대표 희망일자(첫 번째, `collectPrimaryDates`/
+ * `approve_session_request` 와 동일 기준) 하나만 표시한다.
+ */
+export interface PendingCalendarItem {
+  itemId: string;
+  requestId: string;
+  scheduled_date: string;
+  time_slot: string | null;
+  school_id: string;
+  school_name: string;
+  program_name: string;
+  request_status: RequestStatus;
+  student_count: string | null;
+  note: string | null;
 }
 
 // ---- 작업지시서 #015: 강사 불가기간 (아래 TimeConflict 확장에도 사용) ----
