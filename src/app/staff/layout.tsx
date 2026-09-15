@@ -33,6 +33,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/staff">) {
         {
           label: "관리자",
           children: [
+            { href: "/staff/schools", label: "학교 관리" },
             { href: "/staff/programs", label: "프로그램 관리" },
             { href: "/staff/proxy", label: "대리입력" },
             { href: "/staff/settings", label: "기관 설정" },
