@@ -21,8 +21,8 @@ export default async function StaffProxyHubPage() {
         <h1 className="text-xl font-bold">대리입력</h1>
         <p className="mt-1 text-sm text-muted">
           시스템 오픈 전까지 학교·강사에게 받은 자료를 담당자가 대신 입력합니다.
-          한글 문서(.hwp·.hwpx)나 사진·스캔을 올리면 AI 자동채움으로 폼을 채운 뒤
-          확인·저장할 수 있습니다.
+          한글 문서(.hwp·.hwpx), PDF나 사진·스캔을 올리면 AI 자동채움으로 폼을
+          채운 뒤 확인·저장할 수 있습니다.
         </p>
       </div>
 

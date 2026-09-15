@@ -11,7 +11,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 const MAX_TEXT = 40_000;
 
 export type AutofillKind = "school-request" | "instructor";
-export type AutofillSource = "hwp" | "image";
+export type AutofillSource = "hwp" | "image" | "pdf";
 
 export interface AutofillResult {
   kind: AutofillKind;
@@ -100,8 +100,8 @@ function mockFields(
   source: AutofillSource,
   text: string | null,
 ): Record<string, unknown> {
-  // 이미지: 텍스트가 없으니 형식 시연용 고정 샘플 반환
-  if (source === "image") {
+  // 이미지/PDF: 텍스트가 없으니 형식 시연용 고정 샘플 반환
+  if (source === "image" || source === "pdf") {
     return kind === "school-request"
       ? {
           school_name: "매헌중학교",
@@ -206,6 +206,10 @@ function mockFields(
   };
 }
 
+function isPdfFile(filename: string, mimeType: string): boolean {
+  return mimeType === "application/pdf" || filename.toLowerCase().endsWith(".pdf");
+}
+
 export async function autofillFromFile(
   kind: AutofillKind,
   buffer: Buffer,
@@ -213,9 +217,10 @@ export async function autofillFromFile(
   mimeType: string,
 ): Promise<AutofillResult> {
   const isHwp = isHwpFilename(filename);
-  const imageMedia = isHwp ? null : guessImageMedia(filename, mimeType);
-  if (!isHwp && !imageMedia) {
-    throw new Error("hwp/hwpx 문서 또는 이미지(jpg/png/webp) 파일만 가능합니다.");
+  const isPdf = !isHwp && isPdfFile(filename, mimeType);
+  const imageMedia = isHwp || isPdf ? null : guessImageMedia(filename, mimeType);
+  if (!isHwp && !isPdf && !imageMedia) {
+    throw new Error("hwp/hwpx·PDF 문서 또는 이미지(jpg/png/webp) 파일만 가능합니다.");
   }
 
   let text: string | null = null;
@@ -226,7 +231,9 @@ export async function autofillFromFile(
     previewHtml = parsed.html;
     if (!text.trim()) throw new Error("문서에서 텍스트를 추출하지 못했습니다.");
   }
-  const source: AutofillSource = isHwp ? "hwp" : "image";
+  // PDF는 kordoc(hwp 전용 파서)을 거치지 않고 Claude 의 네이티브 PDF 입력(document
+  // 블록)으로 그대로 전달한다 — 별도 렌더링/텍스트 추출 의존성이 필요 없다.
+  const source: AutofillSource = isHwp ? "hwp" : isPdf ? "pdf" : "image";
   const textPreview = text ? text.slice(0, 20_000) : null; // 오른쪽 원본 대조용(폴백용)
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -257,20 +264,35 @@ export async function autofillFromFile(
           )}\n</문서>\n\n스키마에 맞춰 JSON 만 출력하세요.`,
         },
       ]
-    : [
-        {
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: imageMedia as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-            data: buffer.toString("base64"),
+    : isPdf
+      ? [
+          {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: buffer.toString("base64"),
+            },
           },
-        },
-        {
-          type: "text",
-          text: "이 사진/스캔 이미지에서 스키마에 맞춰 값을 추출해 JSON 만 출력하세요.",
-        },
-      ];
+          {
+            type: "text",
+            text: "이 PDF 문서에서 스키마에 맞춰 값을 추출해 JSON 만 출력하세요.",
+          },
+        ]
+      : [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: imageMedia as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+              data: buffer.toString("base64"),
+            },
+          },
+          {
+            type: "text",
+            text: "이 사진/스캔 이미지에서 스키마에 맞춰 값을 추출해 JSON 만 출력하세요.",
+          },
+        ];
 
   const res = await client.messages.create({
     model: MODEL,

@@ -28,8 +28,9 @@ export default async function NewInstructorProfilePage() {
           <span className="text-sm font-semibold text-brand">추천</span>
           <h2 className="text-lg font-bold">파일/사진으로 시작</h2>
           <p className="text-sm text-muted">
-            강사카드 문서(.hwp·.hwpx)나 사진·스캔 이미지를 올리면 성명·연락처
-            등 기본정보부터 경력·자격증·전문분야까지 AI가 한 번에 채웁니다.
+            강사카드 문서(.hwp·.hwpx), PDF나 사진·스캔 이미지를 올리면
+            성명·연락처 등 기본정보부터 경력·자격증·전문분야까지 AI가 한 번에
+            채웁니다.
             이미 파일이 있다면 이쪽이 빠릅니다.
           </p>
         </Link>

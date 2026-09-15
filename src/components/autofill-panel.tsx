@@ -3,13 +3,15 @@
 import { useRef, useState } from "react";
 
 export interface AutofillMeta {
-  source: "hwp" | "image";
+  source: "hwp" | "image" | "pdf";
   simulated: boolean;
   textPreview: string | null;
   /** 오른쪽 "원본 미리보기" 용 완성된 HTML (source==='hwp' 일 때; 서버가 kordoc 으로 생성) */
   previewHtml: string | null;
   /** 이미지 원본 미리보기용 data URL (source==='image' 일 때) */
   imageDataUrl: string | null;
+  /** PDF 원본 미리보기용 data URL (source==='pdf' 일 때; 브라우저가 iframe 으로 그대로 렌더링) */
+  pdfDataUrl: string | null;
   fileName: string;
 }
 
@@ -49,7 +51,9 @@ export function AutofillPanel({
     try {
       const isImage =
         file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
       const imageDataUrl = isImage ? await readAsDataUrl(file) : null;
+      const pdfDataUrl = isPdf ? await readAsDataUrl(file) : null;
 
       const fd = new FormData();
       fd.set("kind", kind);
@@ -66,9 +70,10 @@ export function AutofillPanel({
         textPreview: data.textPreview ?? null,
         previewHtml: data.previewHtml ?? null,
         imageDataUrl,
+        pdfDataUrl,
         fileName: file.name,
       });
-      const src = data.source === "hwp" ? "한글 문서" : "이미지";
+      const src = data.source === "hwp" ? "한글 문서" : data.source === "pdf" ? "PDF" : "이미지";
       // school-request 화면만 오른쪽에 원본 미리보기가 있음(instructor 화면은 없음)
       const previewHint =
         kind === "school-request" ? " 오른쪽 원본과 대조해" : "";
@@ -95,7 +100,7 @@ export function AutofillPanel({
       </h2>
       {!compact && (
         <p className="mt-1 text-xs text-muted">
-          학교/강사에게 받은 <b>한글 문서(.hwp·.hwpx)</b> 또는{" "}
+          학교/강사에게 받은 <b>한글 문서(.hwp·.hwpx)</b>, <b>PDF</b> 또는{" "}
           <b>사진·스캔 이미지</b>를 올리면 항목을 자동으로 채웁니다. 저장 전까지
           자유롭게 수정할 수 있고, 못 읽은 항목은 비워둡니다.
         </p>
@@ -114,7 +119,7 @@ export function AutofillPanel({
         <input
           ref={inputRef}
           type="file"
-          accept=".hwp,.hwpx,image/*"
+          accept=".hwp,.hwpx,.pdf,application/pdf,image/*"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

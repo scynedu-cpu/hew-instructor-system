@@ -28,7 +28,7 @@ export function ProxyRequestForm({
   const [note, setNote] = useState("");
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [preview, setPreview] = useState<{
-    kind: "text" | "image" | "html";
+    kind: "text" | "image" | "html" | "pdf";
     content: string;
     fileName: string;
     simulated: boolean;
@@ -65,6 +65,13 @@ export function ProxyRequestForm({
       setPreview({
         kind: "image",
         content: meta.imageDataUrl,
+        fileName: meta.fileName,
+        simulated: meta.simulated,
+      });
+    } else if (meta.source === "pdf" && meta.pdfDataUrl) {
+      setPreview({
+        kind: "pdf",
+        content: meta.pdfDataUrl,
         fileName: meta.fileName,
         simulated: meta.simulated,
       });
@@ -213,11 +220,17 @@ export function ProxyRequestForm({
               </span>
             )}
           </div>
-          <div className={preview?.kind === "html" ? "flex-1" : "flex-1 overflow-auto p-3"}>
+          <div
+            className={
+              preview?.kind === "html" || preview?.kind === "pdf"
+                ? "flex-1"
+                : "flex-1 overflow-auto p-3"
+            }
+          >
             {!preview ? (
               <p className="py-16 text-center text-sm text-muted">
-                왼쪽 <b>AI 자동채움</b>에서 한글 문서나 사진을 올리면 여기에 원본이
-                표시됩니다.
+                왼쪽 <b>AI 자동채움</b>에서 한글 문서·PDF나 사진을 올리면 여기에
+                원본이 표시됩니다.
               </p>
             ) : preview.kind === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -225,6 +238,13 @@ export function ProxyRequestForm({
                 src={preview.content}
                 alt="업로드 원본"
                 className="mx-auto max-w-full rounded"
+              />
+            ) : preview.kind === "pdf" ? (
+              // 브라우저 내장 PDF 뷰어로 원본을 그대로 표시
+              <iframe
+                src={preview.content}
+                title="원본 미리보기"
+                className="h-[75vh] w-full rounded-b-lg border-0 bg-white"
               />
             ) : preview.kind === "html" ? (
               // 서버(kordoc)가 만든 완성된 HTML 문서 — 표 병합(rowspan/colspan) 그대로 보존.
