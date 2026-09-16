@@ -13,6 +13,33 @@ import { submitProxyRequest, type ProxyRequestState } from "./actions";
 
 const initial: ProxyRequestState = {};
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const WEEKDAY_INDEX: Record<string, number> = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
+
+/**
+ * "매주 화요일 3/10~4/28"처럼 시작~종료일만 적힌 반복 일정 문구를 실제
+ * 회차 날짜 전체로 펼친다. AI가 이 경우 시작일·종료일 2개만 뽑고 중간
+ * 회차를 놓치는 경우가 있어(예: 8회 중 2일만 추출) 텍스트에서 직접
+ * 계산한 날짜를 우선한다. 패턴이 없거나 애매하면 null.
+ */
+function expandWeeklyRecurrence(note: string, referenceYear: number): string[] | null {
+  const m = note.match(
+    /매주\s*([일월화수목금토])요일[^0-9]*(\d{1,2})\s*[./]\s*(\d{1,2})\s*[~\-]\s*(\d{1,2})\s*[./]\s*(\d{1,2})/,
+  );
+  if (!m) return null;
+  const weekday = WEEKDAY_INDEX[m[1]];
+  const start = new Date(Date.UTC(referenceYear, Number(m[2]) - 1, Number(m[3])));
+  const end = new Date(Date.UTC(referenceYear, Number(m[4]) - 1, Number(m[5])));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+
+  const d = new Date(start);
+  while (d.getUTCDay() !== weekday) d.setUTCDate(d.getUTCDate() + 1);
+  const dates: string[] = [];
+  while (d <= end) {
+    dates.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 7);
+  }
+  return dates.length > 1 ? dates : null;
+}
 
 export function ProxyRequestForm({
   schools,
@@ -110,18 +137,27 @@ export function ProxyRequestForm({
     for (const ri of rawItems) {
       const prog = matchProgram(String(ri.program_name ?? ""));
       if (!prog) continue;
-      const dates = Array.isArray(ri.requested_dates)
+      const extractedDates = Array.isArray(ri.requested_dates)
         ? (ri.requested_dates as unknown[])
             .map((d) => String(d).trim())
             .filter((d) => DATE_RE.test(d))
         : [];
       const noteText = String(ri.note ?? "").trim();
+      // "매주 화요일 3/10~4/28"처럼 범위로만 적힌 반복 일정은 AI가 시작·종료일
+      // 2개만 뽑고 중간 회차를 놓치는 경우가 있어, 텍스트에서 직접 계산한
+      // 전체 날짜가 있으면 그걸 우선한다(연도는 AI가 뽑은 날짜 기준, 없으면 올해).
+      const referenceYear = extractedDates[0]
+        ? Number(extractedDates[0].slice(0, 4))
+        : new Date().getFullYear();
+      const weeklyDates = expandWeeklyRecurrence(noteText, referenceYear);
+      const dates = weeklyDates ?? extractedDates;
       // "총 O회"처럼 반복 횟수가 날짜 개수와 맞아떨어지면, AI가 repeat_all_dates
       // 플래그를 놓쳤어도 반복형으로 간주한다(모델 출력에만 의존하지 않는 안전장치).
       const repeatCountMatch = noteText.match(/총\s*(\d+)\s*회/);
       const isRepeating =
         dates.length > 1 &&
-        (ri.repeat_all_dates === true ||
+        (weeklyDates !== null ||
+          ri.repeat_all_dates === true ||
           (repeatCountMatch && Number(repeatCountMatch[1]) === dates.length));
 
       if (isRepeating) {
