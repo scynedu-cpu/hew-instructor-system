@@ -4,15 +4,13 @@
 // 순위 막대그래프 + 강사 선택 시 학교×프로그램 교차표.
 
 import { useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CrossTabCell, RankingRow } from "@/lib/types";
 import { getInstructorCrossTab, getRankings } from "./actions";
 import type { RefInstructor } from "./insights-client";
 import { DateRangeFilter } from "./date-range-filter";
-import { CylinderBar, type CylinderBarProps } from "./cylinder-bar";
 
-const BRAND = "#2563eb";
-const LOW_SAMPLE = "#dc2626";
+const GRAY = "#9ca3af";
 
 function RankingChart({ rows, height = 220 }: { rows: RankingRow[]; height?: number }) {
   if (rows.length === 0) return <p className="text-sm text-muted">데이터가 없습니다.</p>;
@@ -36,15 +34,7 @@ function RankingChart({ rows, height = 220 }: { rows: RankingRow[]; height?: num
             p?.payload?.label,
           ]}
         />
-        <Bar
-          dataKey="avg"
-          isAnimationActive={false}
-          shape={(props) => <CylinderBar {...(props as unknown as CylinderBarProps)} />}
-        >
-          {rows.map((r, i) => (
-            <Cell key={i} fill={r.lowSample ? LOW_SAMPLE : BRAND} />
-          ))}
-        </Bar>
+        <Bar dataKey="avg" fill={GRAY} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

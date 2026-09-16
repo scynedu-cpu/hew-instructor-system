@@ -18,10 +18,9 @@ import type { QuestionAverage, SurveyGroupCode } from "@/lib/types";
 import { getQuestionAverages } from "./actions";
 import type { RefGroup } from "./insights-client";
 import { DateRangeFilter } from "./date-range-filter";
-import { CylinderBar, type CylinderBarProps } from "./cylinder-bar";
 
-const BRAND = "#2563eb";
-const LOWEST = "#dc2626";
+const BRAND = "#d1d5db";
+const LOWEST = "#ef4444";
 
 function QuestionBarChart({ rows }: { rows: QuestionAverage[] }) {
   if (rows.length === 0) {
@@ -48,11 +47,7 @@ function QuestionBarChart({ rows }: { rows: QuestionAverage[] }) {
               p?.payload?.text,
             ]}
           />
-          <Bar
-            dataKey="value"
-            isAnimationActive={false}
-            shape={(props) => <CylinderBar {...(props as unknown as CylinderBarProps)} />}
-          >
+          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
             {chartData.map((r, i) => (
               <Cell key={i} fill={minAvg !== null && r.avg === minAvg ? LOWEST : BRAND} />
             ))}
